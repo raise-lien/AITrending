@@ -1,0 +1,8 @@
+aitrending.db
+aitrending.db-*
+__pycache__/
+*.pyc
+.DS_Store
+.reasonix/
+.claude/
+proxy.py

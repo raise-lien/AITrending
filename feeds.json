@@ -1,0 +1,10 @@
+[
+  {"name": "雷锋网 AI", "url": "https://www.leiphone.com/feed/categoryRss/name/ai"},
+  {"name": "ArXiv CS.AI", "url": "https://export.arxiv.org/rss/cs.AI"},
+  {"name": "Anthropic Research", "url": "https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_anthropic_research.xml"},
+  {"name": "Anthropic News", "url": "https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_anthropic_news.xml"},
+  {"name": "DeepMind", "url": "https://deepmind.google/blog/rss.xml"},
+  {"name": "OpenAI", "url": "https://openai.com/news/rss.xml"},
+  {"name": "MIT Tech Review AI", "url": "https://www.technologyreview.com/topic/artificial-intelligence/feed"},
+  {"name": "MarkTechPost", "url": "https://www.marktechpost.com/feed/"}
+]
