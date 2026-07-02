@@ -61,14 +61,21 @@ def get_years():
 
 
 def query_items(feed_filter=None, search=None, limit=100, year_filter=None):
-    """Get items, optionally filtered by feed_name, year, or full-text search on title+summary."""
+    """Get items, optionally filtered by feed_name, year, or full-text search.
+    feed_filter: str (single feed) or list/tuple (multiple feeds for category).
+    """
     conn = get_db()
     try:
         where = []
         params = []
         if feed_filter:
-            where.append("feed_name = ?")
-            params.append(feed_filter)
+            if isinstance(feed_filter, (list, tuple)):
+                placeholders = ",".join(["?"] * len(feed_filter))
+                where.append(f"feed_name IN ({placeholders})")
+                params.extend(feed_filter)
+            else:
+                where.append("feed_name = ?")
+                params.append(feed_filter)
         if year_filter:
             where.append("substr(published_ts, 1, 4) = ?")
             params.append(str(year_filter))

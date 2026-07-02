@@ -1,119 +1,388 @@
 <!doctype html>
-<html lang="zh-CN" class="bg-zinc-950 text-zinc-100">
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>AITrending — AI 信息聚合</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: { extend: { colors: { brand: '#00d4aa' } } }
-    }
-  </script>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230a0a0f'/%3E%3Ctext x='16' y='23' text-anchor='middle' font-family='Arial' font-weight='700' font-size='20' fill='%2300d4aa'%3EA%3C/text%3E%3C/svg%3E" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
-    /* ponytail: minimal custom styles, Tailwind handles 99% */
-    .item-summary { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-    .item-summary.expanded { -webkit-line-clamp: unset; }
-    .feed-badge { transition: all 0.15s; }
-    .feed-badge.active { background: #00d4aa; color: #000; }
-    .keyword-hl { background: #facc15; color: #000; padding: 0 2px; border-radius: 2px; }
+    /* ── Reset & Base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:       #0a0a0f;
+      --surface:  #12121a;
+      --surface2: #1a1a26;
+      --border:   #1e1e2e;
+      --border-h: #2a2a3e;
+      --text:     #e4e4ef;
+      --text2:    #8b8b9e;
+      --text3:    #55556a;
+      --brand:    #00e4a0;
+      --brand-dim:#00e4a020;
+      --accent:   #6366f1;
+      --red:      #f43f5e;
+      --amber:    #f59e0b;
+      --radius:   10px;
+      --radius-sm: 6px;
+      --transition: 150ms cubic-bezier(.4,0,.2,1);
+    }
+    html { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border-h); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+    /* ── Top Bar ── */
+    .topbar {
+      position: sticky; top: 0; z-index: 50;
+      background: rgba(10,10,15,0.85);
+      backdrop-filter: blur(16px) saturate(1.4);
+      -webkit-backdrop-filter: blur(16px) saturate(1.4);
+      border-bottom: 1px solid var(--border);
+    }
+    .topbar-inner {
+      max-width: 960px; margin: 0 auto;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 24px;
+    }
+    .logo {
+      font-size: 20px; font-weight: 700; letter-spacing: -0.5px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .logo-icon {
+      width: 30px; height: 30px;
+      background: linear-gradient(135deg, var(--brand), #00b4d8);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; font-weight: 800; color: #000;
+      box-shadow: 0 0 20px var(--brand-dim);
+    }
+    .logo-text { color: var(--text); }
+    .logo-text span { color: var(--brand); }
+
+    .topbar-actions { display: flex; align-items: center; gap: 8px; }
+
+    .stat-chip {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 12px; color: var(--text2);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      padding: 5px 10px; border-radius: 8px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .stat-chip .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--brand); }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 14px; border-radius: 8px;
+      font-size: 13px; font-weight: 500; font-family: inherit;
+      border: 1px solid var(--border);
+      background: var(--surface2); color: var(--text2);
+      cursor: pointer; transition: all var(--transition);
+      white-space: nowrap;
+    }
+    .btn:hover { background: var(--border); color: var(--text); border-color: var(--border-h); }
+    .btn-brand {
+      background: var(--brand); color: #000; border-color: var(--brand);
+      font-weight: 600;
+    }
+    .btn-brand:hover { background: #00c88e; color: #000; }
+
+    .btn-spin svg { transition: transform 0.6s ease; }
+    .btn-spinning svg { transform: rotate(360deg); }
+
+    /* ── Layout ── */
+    .layout {
+      max-width: 960px; margin: 0 auto;
+      padding: 24px 24px 80px;
+    }
+
+    /* ── Search ── */
+    .search-wrap { position: relative; margin-bottom: 20px; }
+    .search-wrap svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text3); pointer-events: none; }
+    .search-input {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 14px 12px 40px;
+      font-size: 14px; color: var(--text);
+      font-family: inherit;
+      outline: none; transition: all var(--transition);
+    }
+    .search-input::placeholder { color: var(--text3); }
+    .search-input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-dim); }
+
+    /* ── Filter Row ── */
+    .filter-row {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 20px; flex-wrap: wrap;
+    }
+    .filter-label {
+      font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+      color: var(--text3); white-space: nowrap;
+    }
+
+    /* Category pills */
+    .cat-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+    .cat-pill {
+      padding: 5px 12px; border-radius: 20px;
+      font-size: 12px; font-weight: 500;
+      background: var(--surface2); color: var(--text2);
+      border: 1px solid transparent;
+      cursor: pointer; transition: all var(--transition);
+      white-space: nowrap;
+    }
+    .cat-pill:hover { background: var(--border); color: var(--text); }
+    .cat-pill.active {
+      background: var(--brand-dim); color: var(--brand);
+      border-color: var(--brand);
+    }
+
+    /* Feed dropdown */
+    .feed-select {
+      padding: 5px 28px 5px 12px;
+      border-radius: 20px; font-size: 12px; font-weight: 500;
+      background: var(--surface2); color: var(--text2);
+      border: 1px solid var(--border);
+      appearance: none; cursor: pointer;
+      font-family: inherit; transition: all var(--transition);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%2355556a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 5l3 3 3-3'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 10px center;
+    }
+    .feed-select:hover { border-color: var(--border-h); color: var(--text); }
+    .feed-select:focus { outline: none; border-color: var(--brand); }
+
+    /* ── Item Card ── */
+    .items-list { display: flex; flex-direction: column; gap: 6px; }
+
+    .item-card {
+      display: flex; flex-direction: column; gap: 6px;
+      padding: 16px 18px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: all var(--transition);
+      text-decoration: none; color: inherit;
+      position: relative;
+    }
+    .item-card::before {
+      content: '';
+      position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+      background: transparent; border-radius: 0 2px 2px 0;
+      transition: background var(--transition);
+    }
+    .item-card:hover {
+      background: var(--surface2);
+      border-color: var(--border-h);
+      transform: translateX(2px);
+    }
+    .item-card:hover::before { background: var(--brand); }
+
+    .item-title {
+      font-size: 14px; font-weight: 600; line-height: 1.5;
+      color: var(--text);
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .item-card:hover .item-title { color: var(--brand); }
+
+    .item-summary {
+      font-size: 13px; line-height: 1.6; color: var(--text2);
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .item-meta {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 11px; color: var(--text3);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .item-meta-source {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 8px; border-radius: 4px;
+      background: var(--surface2); color: var(--text2);
+      font-size: 11px; font-weight: 500;
+    }
+    .item-meta-time { white-space: nowrap; }
+
+    .fresh-badge {
+      font-size: 10px; font-weight: 600;
+      padding: 1px 6px; border-radius: 4px;
+      background: var(--brand-dim); color: var(--brand);
+    }
+    .fresh-badge.new { background: #f43f5e20; color: var(--red); }
+    .fresh-badge.today { background: #f59e0b20; color: var(--amber); }
+
+    /* ── States ── */
+    .hidden { display: none !important; }
+    .state-empty, .state-loading {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 80px 20px; text-align: center;
+    }
+    .state-empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.3; }
+    .state-empty-title { font-size: 16px; font-weight: 600; color: var(--text2); margin-bottom: 6px; }
+    .state-empty-desc { font-size: 13px; color: var(--text3); }
+
+    .skeleton {
+      background: linear-gradient(90deg, var(--surface) 25%, var(--surface2) 50%, var(--surface) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: var(--radius);
+      height: 80px;
+    }
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    .keyword-hl { background: rgba(245,158,11,0.25); color: var(--amber); padding: 0 2px; border-radius: 2px; }
+
+    /* ── Responsive ── */
+    @media (max-width: 640px) {
+      .topbar-inner { padding: 12px 16px; }
+      .layout { padding: 16px 16px 60px; }
+      .logo { font-size: 17px; }
+      .stat-chip span:not(.dot) { display: none; }
+      .item-card { padding: 12px 14px; }
+    }
   </style>
 </head>
-<body class="min-h-screen">
+<body>
 
-  <!-- Header -->
-  <header class="border-b border-zinc-800 px-6 py-4">
-    <div class="max-w-5xl mx-auto flex items-center justify-between">
-      <div>
-        <h1 class="text-2xl font-bold tracking-tight">
-          <span class="text-brand">AI</span>Trending
-        </h1>
-        <p class="text-zinc-500 text-sm mt-0.5">AI 研究热点 · 讨论趋势 · 实时聚合</p>
+  <!-- Top Bar -->
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="logo">
+        <div class="logo-icon">AI</div>
+        <div class="logo-text"><span>AI</span>Trending</div>
       </div>
-      <div class="flex items-center gap-3">
-        <div class="relative">
-          <select id="year-select" onchange="setYear(this.value)"
-                  class="appearance-none bg-zinc-800 text-zinc-400 text-xs px-2.5 py-1.5 rounded-lg
-                         border border-zinc-700 hover:border-zinc-600 focus:outline-none cursor-pointer pr-6">
-            <option value="">📅 全部年份</option>
-            {% for y in years %}
-            <option value="{{ y }}">{{ y }}</option>
-            {% endfor %}
-          </select>
-          <span class="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-zinc-600 text-xs">▼</span>
+      <div class="topbar-actions">
+        <div class="stat-chip" title="已收集条目">
+          <span class="dot"></span>
+          <span id="stat-total">—</span> 条
         </div>
-        <span id="item-count" class="text-zinc-500 text-sm"></span>
-        <button onclick="refresh()"
-                class="text-sm px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 transition-colors">
-          🔄 刷新
+        <div class="stat-chip" title="数据源">
+          📡 <span id="stat-feeds">—</span> 源
+        </div>
+        <select id="year-select" onchange="setYear(this.value)"
+                class="btn" style="padding:5px 24px 5px 10px; font-size:12px; cursor:pointer;
+                  background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 fill=%22none%22 stroke=%22%2355556a%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M3 5l3 3 3-3%22/%3E%3C/svg%3E');
+                  background-repeat:no-repeat; background-position:right 8px center;">
+          <option value="">全部年份</option>
+          {% for y in years %}
+          <option value="{{ y }}">{{ y }}</option>
+          {% endfor %}
+        </select>
+        <button class="btn" id="btn-refresh" onclick="refresh()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+          刷新
         </button>
       </div>
     </div>
-  </header>
+  </div>
 
-  <main class="max-w-5xl mx-auto px-6 py-6">
-    <!-- Search + Filters -->
-    <div class="mb-6 space-y-3">
-      <input id="search" type="text" placeholder="搜索标题 / 摘要…"
-             class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-2.5 text-sm
-                    placeholder-zinc-500 focus:outline-none focus:border-brand transition-colors"
-             oninput="debounceRender()">
+  <div class="layout">
 
-      <div id="feed-filters" class="flex flex-wrap gap-2">
-        <button onclick="setFeed('')" data-feed=""
-                class="feed-badge active text-xs px-2.5 py-1 rounded-full bg-zinc-800 text-zinc-400
-                       hover:bg-zinc-700 cursor-pointer">
-          全部
-        </button>
-        {% for f in feeds %}
-        <button onclick="setFeed('{{ f.feed_name }}')" data-feed="{{ f.feed_name }}"
-                class="feed-badge text-xs px-2.5 py-1 rounded-full bg-zinc-800 text-zinc-400
-                       hover:bg-zinc-700 cursor-pointer">
-          {{ f.feed_name }} <span class="text-zinc-600" id="cnt-{{ loop.index }}">({{ f.cnt }})</span>
-        </button>
+    <!-- Search -->
+    <div class="search-wrap">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input id="search" type="text" placeholder="搜索 AI 研究、模型发布、技术动态…" class="search-input" oninput="debounceRender()">
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-row">
+      <span class="filter-label">分类</span>
+      <div class="cat-pills">
+        <button class="cat-pill active" data-cat="" onclick="setCategory('')">全部</button>
+        {% for c in categories %}
+        <button class="cat-pill" data-cat="{{ c.name }}" onclick="setCategory('{{ c.name }}')">{{ c.name }}</button>
         {% endfor %}
       </div>
     </div>
 
-    <!-- Loading -->
-    <div id="loading" class="text-center py-12 text-zinc-500 hidden">
-      <div class="animate-pulse">加载中…</div>
+    <div class="filter-row" style="margin-bottom: 24px;">
+      <span class="filter-label">来源</span>
+      <select id="feed-select" class="feed-select" onchange="setFeed(this.value)">
+        <option value="">全部来源</option>
+        {% for f in feeds %}
+        <option value="{{ f.feed_name }}">{{ f.feed_name }} ({{ f.cnt }})</option>
+        {% endfor %}
+      </select>
+      <span id="result-count" style="font-size:12px; color:var(--text3); margin-left: auto;"></span>
     </div>
 
-    <!-- Items list -->
-    <div id="items" class="space-y-4"></div>
-
-    <!-- Empty state -->
-    <div id="empty" class="text-center py-20 hidden">
-      <p class="text-zinc-600 text-lg">📭 暂无数据</p>
-      <p class="text-zinc-700 text-sm mt-1">点击刷新按钮拉取最新内容</p>
+    <!-- Loading skeleton -->
+    <div id="loading" class="hidden">
+      <div class="items-list">
+        <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+        <div class="skeleton"></div><div class="skeleton"></div>
+      </div>
     </div>
-  </main>
+
+    <!-- Items -->
+    <div id="items" class="items-list"></div>
+
+    <!-- Empty -->
+    <div id="empty" class="state-empty hidden">
+      <div class="state-empty-icon">📭</div>
+      <div class="state-empty-title">暂无数据</div>
+      <div class="state-empty-desc">点击右上角「刷新」拉取最新内容</div>
+    </div>
+  </div>
 
   <script>
-    // ── State ──
     let currentFeed = '';
+    let currentCategory = '';
     let currentSearch = '';
-    let currentYear = '2026';  // ponytail: default to current year
+    let currentYear = '2026';
     let debounceTimer;
     let abortController;
 
-    // ── Render ──
+    // Safely strip HTML tags and return plain text
+    function stripHtml(html) {
+      if (!html) return '';
+      const tmp = document.createElement('div');
+      tmp.innerHTML = html;
+      return tmp.textContent || tmp.innerText || '';
+    }
+
+    // Escape HTML special chars to prevent XSS and broken DOM
+    function escapeHtml(text) {
+      if (!text) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
     async function render() {
       const itemsEl = document.getElementById('items');
       const emptyEl = document.getElementById('empty');
       const loadingEl = document.getElementById('loading');
-      const countEl = document.getElementById('item-count');
+      const countEl = document.getElementById('result-count');
 
-      // Cancel any previous request still in flight
       if (abortController) abortController.abort();
       abortController = new AbortController();
 
       loadingEl.classList.remove('hidden');
       emptyEl.classList.add('hidden');
+      itemsEl.innerHTML = '';
 
       const params = new URLSearchParams({ limit: 3000 });
       if (currentFeed) params.set('feed', currentFeed);
+      else if (currentCategory) params.set('category', currentCategory);
       if (currentSearch) params.set('q', currentSearch);
       if (currentYear) params.set('year', currentYear);
 
@@ -122,113 +391,132 @@
         const res = await fetch(`/api/items?${params}`, { signal: abortController.signal });
         items = await res.json();
       } catch (e) {
-        if (e.name === 'AbortError') return; // silently ignore cancelled requests
-        itemsEl.innerHTML = '<p class="text-red-400 text-center py-8">加载失败，请确认服务已启动</p>';
+        if (e.name === 'AbortError') return;
+        itemsEl.innerHTML = '<div style="color:var(--red);text-align:center;padding:40px;">加载失败，请确认服务已启动</div>';
         loadingEl.classList.add('hidden');
         return;
       }
 
       loadingEl.classList.add('hidden');
-      countEl.textContent = `${items.length} 条`;
+      countEl.textContent = items.length ? `${items.length} 条结果` : '';
 
       if (!items.length) {
         emptyEl.classList.remove('hidden');
-        itemsEl.innerHTML = '';
         return;
       }
 
       const searchTerm = currentSearch.toLowerCase();
+      const now = Date.now();
+
       itemsEl.innerHTML = items.map(item => {
         const title = item.title || '(no title)';
-        const feed = item.feed_name;
-        const summaryRaw = (item.summary || '').replace(/<[^>]*>/g, '');
-        const summary = summaryRaw ? summaryRaw.slice(0, 280) : `来自 ${feed} 的最新内容`;
+        const feed = item.feed_name || '';
+        const summaryRaw = stripHtml(item.summary || '');
+        const summary = summaryRaw ? summaryRaw.slice(0, 240) : '';
         const link = item.link || '#';
-        const time = item.published ? new Date(item.published).toLocaleDateString('zh-CN', {
-          month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-        }) : '';
+        const published = item.published || '';
+        const publishedTs = item.published_ts || '';
 
-        // Highlight search term
+        // Freshness badge
+        let freshBadge = '';
+        if (publishedTs) {
+          const pubTime = new Date(publishedTs).getTime();
+          const diffH = (now - pubTime) / 3600000;
+          if (diffH < 6) { freshBadge = '<span class="fresh-badge new">NEW</span>'; }
+          else if (diffH < 24) { freshBadge = '<span class="fresh-badge today">今日</span>'; }
+        }
+
+        // Time display
+        let timeStr = '';
+        if (publishedTs) {
+          const d = new Date(publishedTs);
+          const now2 = new Date();
+          const isThisYear = d.getFullYear() === now2.getFullYear();
+          timeStr = isThisYear
+            ? d.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })
+            : d.toLocaleDateString('zh-CN', { year: 'numeric', month: 'short', day: 'numeric' });
+        } else if (published) {
+          try { timeStr = new Date(published).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' }); } catch(e) {}
+        }
+
         const hl = (text) => {
-          if (!searchTerm) return text;
+          const escaped = escapeHtml(text);
+          if (!searchTerm) return escaped;
           const re = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-          return text.replace(re, '<mark class="keyword-hl">$1</mark>');
+          return escaped.replace(re, '<mark class="keyword-hl">$1</mark>');
         };
 
         return `
-          <article class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 hover:border-zinc-700 transition-colors">
-            <div class="flex items-start justify-between gap-3">
-              <div class="flex-1 min-w-0">
-                <a href="${link}" target="_blank" rel="noopener"
-                   class="text-sm font-medium text-zinc-100 hover:text-brand transition-colors line-clamp-2">
-                  ${hl(title)}
-                </a>
-                <p class="item-summary text-xs text-zinc-400 mt-1.5 leading-relaxed"
-                   onclick="this.classList.toggle('expanded')">
-                  ${hl(summary)}
-                </p>
+          <a href="${link}" target="_blank" rel="noopener" class="item-card">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+              <div style="flex:1;min-width:0;">
+                <div class="item-title">${hl(title)}</div>
+                ${summary ? `<div class="item-summary" style="margin-top:4px;">${hl(summary)}</div>` : ''}
               </div>
             </div>
-            <div class="flex items-center gap-3 mt-2.5 text-xs text-zinc-500">
-              <span class="px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400">${feed}</span>
-              ${time ? `<span>${time}</span>` : ''}
+            <div class="item-meta" style="margin-top:8px;">
+              <span class="item-meta-source">${feed}</span>
+              ${timeStr ? `<span class="item-meta-time">${timeStr}</span>` : ''}
+              ${freshBadge}
             </div>
-          </article>
+          </a>
         `;
       }).join('');
     }
 
     function debounceRender() {
       clearTimeout(debounceTimer);
-      currentSearch = document.getElementById('search').value;
-      debounceTimer = setTimeout(render, 250);
+      currentSearch = document.getElementById('search').value.trim();
+      debounceTimer = setTimeout(render, 200);
     }
 
-    function setFeed(feed) {
-      currentFeed = feed;
-      document.querySelectorAll('#feed-filters .feed-badge').forEach(b => {
-        b.classList.toggle('active', b.dataset.feed === feed);
-      });
+    function setFeed(val) {
+      currentFeed = val;
+      currentCategory = '';
+      document.querySelectorAll('.cat-pill').forEach(b => b.classList.toggle('active', b.dataset.cat === ''));
+      render();
+    }
+
+    function setCategory(cat) {
+      currentCategory = cat;
+      currentFeed = '';
+      document.getElementById('feed-select').value = '';
+      document.querySelectorAll('.cat-pill').forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
       render();
     }
 
     function setYear(year) {
       currentYear = year;
-      const sel = document.getElementById('year-select');
-      if (sel) sel.value = year;
-      updateFeedCounts(year);
+      document.getElementById('year-select').value = year;
+      updateStats();
       render();
     }
 
-    async function updateFeedCounts(year) {
+    async function updateStats() {
       try {
-        const url = year ? `/api/feeds?year=${year}` : '/api/feeds';
-        const res = await fetch(url);
-        const feeds = await res.json();
-        feeds.forEach(f => {
-          const span = document.querySelector(`[data-feed="${f.feed_name}"] .text-zinc-600`);
-          if (span) span.textContent = `(${f.cnt})`;
-        });
-        // also update the "全部" badge total
-        const allSpan = document.querySelector('[data-feed=""] .text-zinc-600');
-        if (allSpan) {
-          const total = feeds.reduce((s, f) => s + f.cnt, 0);
-          allSpan.textContent = `(${total})`;
-        }
-      } catch(e) { /* ignore */ }
+        const year = currentYear;
+        const f = await fetch(year ? `/api/feeds?year=${year}` : '/api/feeds');
+        const feeds = await f.json();
+        const total = feeds.reduce((s, x) => s + x.cnt, 0);
+        document.getElementById('stat-total').textContent = total.toLocaleString();
+        document.getElementById('stat-feeds').textContent = feeds.length;
+      } catch(e) {}
     }
 
     async function refresh() {
-      try {
-        await fetch('/api/refresh');
-      } catch (_) { /* ignore */ }
-      render();
-      // Also reload feed counts by reloading page (lazy but works)
-      setTimeout(() => location.reload(), 1500);
+      const btn = document.getElementById('btn-refresh');
+      btn.classList.add('btn-spin');
+      try { await fetch('/api/refresh'); } catch(e) {}
+      setTimeout(() => {
+        btn.classList.remove('btn-spin');
+        updateStats();
+        render();
+      }, 1200);
     }
 
     // ── Init ──
     document.getElementById('year-select').value = currentYear;
+    updateStats();
     render();
   </script>
 </body>
