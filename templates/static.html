@@ -1,0 +1,611 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AITrending — AI 信息聚合</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:       #0a0a0f;
+      --surface:  #12121a;
+      --surface2: #1a1a26;
+      --border:   #1e1e2e;
+      --border-h: #2a2a3e;
+      --text:     #e4e4ef;
+      --text2:    #8b8b9e;
+      --text3:    #55556a;
+      --brand:    #00e4a0;
+      --brand-dim:#00e4a020;
+      --accent:   #6366f1;
+      --red:      #f43f5e;
+      --amber:    #f59e0b;
+      --radius:   10px;
+      --radius-sm: 6px;
+      --transition: 150ms cubic-bezier(.4,0,.2,1);
+    }
+    html { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border-h); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+    .topbar {
+      position: sticky; top: 0; z-index: 50;
+      background: rgba(10,10,15,0.85);
+      backdrop-filter: blur(16px) saturate(1.4);
+      -webkit-backdrop-filter: blur(16px) saturate(1.4);
+      border-bottom: 1px solid var(--border);
+    }
+    .topbar-inner {
+      max-width: 960px; margin: 0 auto;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 24px;
+    }
+    .logo {
+      font-size: 20px; font-weight: 700; letter-spacing: -0.5px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .logo-icon {
+      width: 30px; height: 30px;
+      background: linear-gradient(135deg, var(--brand), #00b4d8);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; font-weight: 800; color: #000;
+      box-shadow: 0 0 20px var(--brand-dim);
+    }
+    .logo-text { color: var(--text); }
+    .logo-text span { color: var(--brand); }
+
+    .topbar-actions { display: flex; align-items: center; gap: 8px; }
+
+    .stat-chip {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 12px; color: var(--text2);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      padding: 5px 10px; border-radius: 8px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .stat-chip .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--brand); }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 14px; border-radius: 8px;
+      font-size: 13px; font-weight: 500; font-family: inherit;
+      border: 1px solid var(--border);
+      background: var(--surface2); color: var(--text2);
+      cursor: pointer; transition: all var(--transition);
+      white-space: nowrap;
+    }
+    .btn:hover { background: var(--border); color: var(--text); border-color: var(--border-h); }
+    .btn-brand {
+      background: var(--brand); color: #000; border-color: var(--brand);
+      font-weight: 600;
+    }
+    .btn-brand:hover { background: #00c88e; color: #000; }
+
+    .layout {
+      max-width: 960px; margin: 0 auto;
+      padding: 24px 24px 80px;
+    }
+
+    .search-wrap { position: relative; margin-bottom: 20px; }
+    .search-wrap svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text3); pointer-events: none; }
+    .search-input {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 14px 12px 40px;
+      font-size: 14px; color: var(--text);
+      font-family: inherit;
+      outline: none; transition: all var(--transition);
+    }
+    .search-input::placeholder { color: var(--text3); }
+    .search-input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-dim); }
+
+    .filter-row {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 20px; flex-wrap: wrap;
+    }
+    .filter-label {
+      font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+      color: var(--text3); white-space: nowrap;
+    }
+
+    .cat-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+    .cat-pill {
+      padding: 5px 12px; border-radius: 20px;
+      font-size: 12px; font-weight: 500;
+      background: var(--surface2); color: var(--text2);
+      border: 1px solid transparent;
+      cursor: pointer; transition: all var(--transition);
+      white-space: nowrap;
+    }
+    .cat-pill:hover { background: var(--border); color: var(--text); }
+    .cat-pill.active {
+      background: var(--brand-dim); color: var(--brand);
+      border-color: var(--brand);
+    }
+
+    .feed-select {
+      padding: 5px 28px 5px 12px;
+      border-radius: 20px; font-size: 12px; font-weight: 500;
+      background: var(--surface2); color: var(--text2);
+      border: 1px solid var(--border);
+      appearance: none; cursor: pointer;
+      font-family: inherit; transition: all var(--transition);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%2355556a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 5l3 3 3-3'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 10px center;
+    }
+    .feed-select:hover { border-color: var(--border-h); color: var(--text); }
+    .feed-select:focus { outline: none; border-color: var(--brand); }
+
+    .items-list { display: flex; flex-direction: column; gap: 6px; }
+
+    .item-card {
+      display: flex; flex-direction: column; gap: 6px;
+      padding: 16px 18px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: all var(--transition);
+      text-decoration: none; color: inherit;
+      position: relative;
+    }
+    .item-card::before {
+      content: '';
+      position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+      background: transparent; border-radius: 0 2px 2px 0;
+      transition: background var(--transition);
+    }
+    .item-card:hover {
+      background: var(--surface2);
+      border-color: var(--border-h);
+      transform: translateX(2px);
+    }
+    .item-card:hover::before { background: var(--brand); }
+
+    .item-title {
+      font-size: 14px; font-weight: 600; line-height: 1.5;
+      color: var(--text);
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .item-card:hover .item-title { color: var(--brand); }
+
+    .item-summary {
+      font-size: 13px; line-height: 1.6; color: var(--text2);
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .item-meta {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 11px; color: var(--text3);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .item-meta-source {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 8px; border-radius: 4px;
+      background: var(--surface2); color: var(--text2);
+      font-size: 11px; font-weight: 500;
+    }
+    .item-meta-time { white-space: nowrap; }
+
+    .fresh-badge {
+      font-size: 10px; font-weight: 600;
+      padding: 1px 6px; border-radius: 4px;
+      background: var(--brand-dim); color: var(--brand);
+    }
+    .fresh-badge.new { background: #f43f5e20; color: var(--red); }
+    .fresh-badge.today { background: #f59e0b20; color: var(--amber); }
+
+    .hidden { display: none !important; }
+    .state-empty, .state-loading {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 80px 20px; text-align: center;
+    }
+    .state-empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.3; }
+    .state-empty-title { font-size: 16px; font-weight: 600; color: var(--text2); margin-bottom: 6px; }
+    .state-empty-desc { font-size: 13px; color: var(--text3); }
+
+    .skeleton {
+      background: linear-gradient(90deg, var(--surface) 25%, var(--surface2) 50%, var(--surface) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: var(--radius);
+      height: 80px;
+    }
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    .keyword-hl { background: rgba(245,158,11,0.25); color: var(--amber); padding: 0 2px; border-radius: 2px; }
+
+    .load-more-wrap {
+      display: flex; justify-content: center; padding: 24px 0;
+    }
+    .load-more {
+      padding: 10px 28px; border-radius: 8px;
+      font-size: 13px; font-weight: 500; font-family: inherit;
+      border: 1px solid var(--border);
+      background: var(--surface2); color: var(--text2);
+      cursor: pointer; transition: all var(--transition);
+    }
+    .load-more:hover { background: var(--border); color: var(--text); border-color: var(--border-h); }
+    .load-more:disabled { opacity: 0.5; cursor: default; }
+
+    .loading-spinner {
+      display: flex; justify-content: center; padding: 24px 0;
+    }
+    .loading-spinner svg {
+      width: 24px; height: 24px;
+      animation: spin 0.8s linear infinite;
+      color: var(--text3);
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 640px) {
+      .topbar-inner { padding: 12px 16px; }
+      .layout { padding: 16px 16px 60px; }
+      .logo { font-size: 17px; }
+      .stat-chip span:not(.dot) { display: none; }
+      .item-card { padding: 12px 14px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="logo">
+        <div class="logo-icon">AI</div>
+        <div class="logo-text"><span>AI</span>Trending</div>
+      </div>
+      <div class="topbar-actions">
+        <div class="stat-chip" title="已收集条目">
+          <span class="dot"></span>
+          <span id="stat-total">&mdash;</span> 条
+        </div>
+        <div class="stat-chip" title="数据源">
+          📡 <span id="stat-feeds">&mdash;</span> 源
+        </div>
+        <select id="year-select" onchange="setYear(this.value)"
+                class="btn" style="padding:5px 24px 5px 10px; font-size:12px; cursor:pointer;
+                  background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 fill=%22none%22 stroke=%22%2355556a%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M3 5l3 3 3-3%22/%3E%3C/svg%3E');
+                  background-repeat:no-repeat; background-position:right 8px center;">
+          <option value="">全部年份</option>
+        </select>
+        <div class="stat-chip" title="数据更新时间">
+          更新于 <span id="last-updated">&mdash;</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="layout">
+
+    <div class="search-wrap">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input id="search" type="text" placeholder="搜索 AI 研究、模型发布、技术动态…" class="search-input" oninput="debounceRender()">
+    </div>
+
+    <div class="filter-row">
+      <span class="filter-label">分类</span>
+      <div class="cat-pills">
+        <button class="cat-pill active" data-cat="" onclick="setCategory('')">全部</button>
+      </div>
+    </div>
+
+    <div class="filter-row" style="margin-bottom: 24px;">
+      <span class="filter-label">来源</span>
+      <select id="feed-select" class="feed-select" onchange="setFeed(this.value)">
+        <option value="">全部来源</option>
+      </select>
+      <span id="result-count" style="font-size:12px; color:var(--text3); margin-left: auto;"></span>
+    </div>
+
+    <div id="loading" class="hidden">
+      <div class="items-list">
+        <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+        <div class="skeleton"></div><div class="skeleton"></div>
+      </div>
+    </div>
+
+    <div id="items" class="items-list"></div>
+
+    <div id="load-more-wrap" class="load-more-wrap hidden">
+      <button class="load-more" id="btn-load-more" onclick="loadMore()">加载更多</button>
+    </div>
+
+    <div id="loading-more" class="loading-spinner hidden">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+    </div>
+
+    <div id="empty" class="state-empty hidden">
+      <div class="state-empty-icon">📭</div>
+      <div class="state-empty-title">暂无数据</div>
+      <div class="state-empty-desc">数据将在下次定时抓取后更新</div>
+    </div>
+  </div>
+
+  <script>
+    // ── Static site: all data loaded from local JSON files ──
+    // Detect base path for GitHub Pages subdirectory deployment
+    var BASE_URL = window.location.pathname.replace(/\/[^\/]*$/, '/');
+    var ALL_ITEMS = [];
+    var META = {};
+    var currentFeed = '';
+    var currentCategory = '';
+    var currentSearch = '';
+    var currentYear = '2026';
+    var debounceTimer;
+    var filteredItems = [];
+    var currentOffset = 0;
+    var PAGE_SIZE = 50;
+
+    // ── Fetch data on load ──
+    async function initData() {
+      try {
+        var itemsRes = await fetch(BASE_URL + 'data/items.json');
+        var metaRes = await fetch(BASE_URL + 'data/meta.json');
+        ALL_ITEMS = await itemsRes.json();
+        META = await metaRes.json();
+      } catch(e) {
+        console.error('Failed to load data:', e);
+        document.getElementById('items').innerHTML =
+          '<div style="color:var(--red);text-align:center;padding:40px;">数据加载失败，请稍后刷新</div>';
+        return;
+      }
+
+      // Populate year select
+      var yearSelect = document.getElementById('year-select');
+      yearSelect.innerHTML = '<option value="">全部年份</option>' +
+        META.years.map(function(y) { return '<option value="' + y + '">' + y + '</option>'; }).join('');
+      yearSelect.value = currentYear;
+
+      // Populate category pills
+      var catPills = document.querySelector('.cat-pills');
+      catPills.innerHTML = '<button class="cat-pill active" data-cat="" onclick="setCategory(\'\')">全部</button>' +
+        META.categories.map(function(c) {
+          return '<button class="cat-pill" data-cat="' + c.name + '" onclick="setCategory(\'' + c.name + '\')">' + c.name + '</button>';
+        }).join('');
+
+      // Populate feed select
+      var feedSelect = document.getElementById('feed-select');
+      feedSelect.innerHTML = '<option value="">全部来源</option>' +
+        META.feeds.map(function(f) {
+          return '<option value="' + f.name + '">' + f.name + ' (' + f.count + ')</option>';
+        }).join('');
+
+      // Update stats
+      updateStats();
+
+      // Render items
+      render(true);
+    }
+
+    function stripHtml(html) {
+      if (!html) return '';
+      var tmp = document.createElement('div');
+      tmp.innerHTML = html;
+      return tmp.textContent || tmp.innerText || '';
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      var div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function escapeRegExp(string) {
+      return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    // ── Client-side filtering ──
+    function getFilteredItems() {
+      return ALL_ITEMS.filter(function(item) {
+        if (currentYear) {
+          var ts = item.published_ts || '';
+          if (!ts.startsWith(currentYear)) return false;
+        }
+        if (currentFeed && item.feed_name !== currentFeed) return false;
+        if (currentCategory) {
+          var feed = META.feeds.find(function(f) { return f.name === item.feed_name; });
+          if (!feed || feed.category !== currentCategory) return false;
+        }
+        if (currentSearch) {
+          var q = currentSearch.toLowerCase();
+          var title = (item.title || '').toLowerCase();
+          var summary = stripHtml(item.summary || '').toLowerCase();
+          if (!title.includes(q) && !summary.includes(q)) return false;
+        }
+        return true;
+      });
+    }
+
+    function render(reset) {
+      if (reset === undefined) reset = true;
+      var itemsEl = document.getElementById('items');
+      var emptyEl = document.getElementById('empty');
+      var countEl = document.getElementById('result-count');
+      var loadMoreWrap = document.getElementById('load-more-wrap');
+
+      if (reset) {
+        filteredItems = getFilteredItems();
+        currentOffset = 0;
+        itemsEl.innerHTML = '';
+        loadMoreWrap.classList.add('hidden');
+      }
+
+      var total = filteredItems.length;
+      var pageItems = filteredItems.slice(currentOffset, currentOffset + PAGE_SIZE);
+
+      countEl.textContent = total ? total + ' 条结果' : '';
+
+      if (!filteredItems.length) {
+        emptyEl.classList.remove('hidden');
+        itemsEl.innerHTML = '';
+        return;
+      }
+      emptyEl.classList.add('hidden');
+
+      var searchTerm = currentSearch.toLowerCase();
+      var now = Date.now();
+
+      var html = pageItems.map(function(item) {
+        var title = item.title || '(no title)';
+        var feed = item.feed_name || '';
+        var summaryRaw = stripHtml(item.summary || '');
+        var summary = summaryRaw ? summaryRaw.slice(0, 240) : '';
+        var link = item.link || '#';
+        var published = item.published || '';
+        var publishedTs = item.published_ts || '';
+
+        var freshBadge = '';
+        if (publishedTs) {
+          var pubTime = new Date(publishedTs).getTime();
+          var diffH = (now - pubTime) / 3600000;
+          if (diffH < 6) { freshBadge = '<span class="fresh-badge new">NEW</span>'; }
+          else if (diffH < 24) { freshBadge = '<span class="fresh-badge today">今日</span>'; }
+        }
+
+        var timeStr = '';
+        if (publishedTs) {
+          var d = new Date(publishedTs);
+          var now2 = new Date();
+          var isThisYear = d.getFullYear() === now2.getFullYear();
+          timeStr = isThisYear
+            ? d.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })
+            : d.toLocaleDateString('zh-CN', { year: 'numeric', month: 'short', day: 'numeric' });
+        } else if (published) {
+          try { timeStr = new Date(published).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' }); } catch(e) {}
+        }
+
+        function hl(text) {
+          var escaped = escapeHtml(text);
+          if (!searchTerm) return escaped;
+          var re = new RegExp('(' + escapeRegExp(searchTerm) + ')', 'gi');
+          return escaped.replace(re, '<mark class="keyword-hl">$1</mark>');
+        }
+
+        return '<a href="' + link + '" target="_blank" rel="noopener" class="item-card">' +
+          '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">' +
+            '<div style="flex:1;min-width:0;">' +
+              '<div class="item-title">' + hl(title) + '</div>' +
+              (summary ? '<div class="item-summary" style="margin-top:4px;">' + hl(summary) + '</div>' : '') +
+            '</div>' +
+          '</div>' +
+          '<div class="item-meta" style="margin-top:8px;">' +
+            '<span class="item-meta-source">' + feed + '</span>' +
+            (timeStr ? '<span class="item-meta-time">' + timeStr + '</span>' : '') +
+            freshBadge +
+          '</div>' +
+        '</a>';
+      }).join('');
+
+      if (reset) {
+        itemsEl.innerHTML = html;
+      } else {
+        itemsEl.insertAdjacentHTML('beforeend', html);
+      }
+
+      if (currentOffset + PAGE_SIZE < total) {
+        loadMoreWrap.classList.remove('hidden');
+      } else {
+        loadMoreWrap.classList.add('hidden');
+      }
+    }
+
+    function debounceRender() {
+      clearTimeout(debounceTimer);
+      currentSearch = document.getElementById('search').value.trim();
+      debounceTimer = setTimeout(function() { render(true); }, 300);
+    }
+
+    function setFeed(val) {
+      currentFeed = val;
+      currentCategory = '';
+      document.querySelectorAll('.cat-pill').forEach(function(b) {
+        b.classList.toggle('active', b.dataset.cat === '');
+      });
+      render(true);
+    }
+
+    function setCategory(cat) {
+      currentCategory = cat;
+      currentFeed = '';
+      document.getElementById('feed-select').value = '';
+      document.querySelectorAll('.cat-pill').forEach(function(b) {
+        b.classList.toggle('active', b.dataset.cat === cat);
+      });
+      render(true);
+    }
+
+    function setYear(year) {
+      currentYear = year;
+      document.getElementById('year-select').value = year;
+      updateStats();
+      render(true);
+    }
+
+    function loadMore() {
+      currentOffset += PAGE_SIZE;
+      render(false);
+    }
+
+    function updateStats() {
+      var total = META.total_items || 0;
+      var yearFiltered = currentYear
+        ? ALL_ITEMS.filter(function(i) { return (i.published_ts || '').startsWith(currentYear); }).length
+        : total;
+      document.getElementById('stat-total').textContent = yearFiltered.toLocaleString();
+      document.getElementById('stat-feeds').textContent = META.feeds ? META.feeds.length : '—';
+
+      var updatedEl = document.getElementById('last-updated');
+      if (updatedEl && META.generated_at) {
+        var d = new Date(META.generated_at);
+        updatedEl.textContent = d.toLocaleString('zh-CN', { dateStyle: 'short', timeStyle: 'short' });
+      }
+    }
+
+    // ── Infinite scroll via IntersectionObserver ──
+    var sentinel = document.createElement('div');
+    sentinel.id = 'sentinel';
+    sentinel.style.height = '1px';
+    document.querySelector('.layout').appendChild(sentinel);
+
+    var isLoadingMore = false;
+    var observer = new IntersectionObserver(function(entries) {
+      if (entries[0].isIntersecting && currentOffset + PAGE_SIZE < filteredItems.length && !isLoadingMore) {
+        isLoadingMore = true;
+        loadMore();
+        isLoadingMore = false;
+      }
+    }, { rootMargin: '200px' });
+    observer.observe(sentinel);
+
+    // ── Init ──
+    initData();
+  </script>
+</body>
+</html>
