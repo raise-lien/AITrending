@@ -1,12 +1,14 @@
 """
-AITrending Web Panel — Flask app with one page.
-ponytail: single file, no blueprints, no auth, just works.
+AITrending Web Panel — Flask app with pagination, FTS5 search, and feed monitoring.
 """
 
 import json
 import os
 from flask import Flask, render_template, request, jsonify
-from db import init_db, query_items, get_feeds_with_counts, get_years
+from db import (
+    init_db, query_items, count_items, get_feeds_with_counts, get_years,
+    get_feed_health, rebuild_fts_index,
+)
 from fetcher import fetch_all, load_feeds as load_feeds_json
 from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -61,7 +63,8 @@ def api_items():
     category = request.args.get("category") or None
     search = request.args.get("q") or None
     year = request.args.get("year") or None
-    limit = int(request.args.get("limit", 3000))
+    limit = min(int(request.args.get("limit", 50)), 200)
+    offset = int(request.args.get("offset", 0))
 
     # If category is given, filter by all feeds in that category
     feed_filter = None
@@ -69,13 +72,16 @@ def api_items():
         cat_map = _get_category_map()
         names = cat_map.get(category, [])
         if names:
-            # Use a special sentinel to pass multiple feed names to query_items
-            feed_filter = names  # list
+            feed_filter = names
     if feed_filter is None and feed:
-        feed_filter = feed  # string
+        feed_filter = feed
 
-    items = query_items(feed_filter=feed_filter, search=search, year_filter=year, limit=limit)
-    return jsonify(items)
+    items = query_items(
+        feed_filter=feed_filter, search=search, year_filter=year,
+        limit=limit, offset=offset,
+    )
+    total = count_items(feed_filter=feed_filter, search=search, year_filter=year)
+    return jsonify({"items": items, "total": total, "limit": limit, "offset": offset})
 
 
 @app.route("/api/feeds")
@@ -91,7 +97,6 @@ def api_categories():
     year = request.args.get("year") or None
     cat_map = _get_category_map()
     feeds_with_counts = get_feeds_with_counts(year_filter=year)
-    # Build a feed_name -> cnt lookup
     feed_cnt = {f["feed_name"]: f["cnt"] for f in feeds_with_counts}
     result = []
     for cat, names in cat_map.items():
@@ -107,7 +112,30 @@ def api_refresh():
     return jsonify({"new": new, "errors": errs})
 
 
-# ── Diagnostics (ponytail: useful for debugging, no auth needed for local) ──
+@app.route("/api/health/feeds")
+def api_feed_health():
+    """Return feed health status based on recent fetch logs."""
+    feeds_json = load_feeds_json()
+    health = get_feed_health()
+    health_map = {h["feed_name"]: h for h in health}
+
+    result = []
+    for f in feeds_json:
+        h = health_map.get(f["name"], {
+            "feed_name": f["name"],
+            "last_status": "unknown",
+            "last_fetched": None,
+            "last_error": None,
+            "consecutive_errors": 0,
+        })
+        h["url"] = f["url"]
+        h["category"] = f.get("category", "")
+        result.append(h)
+
+    return jsonify(result)
+
+
+# ── Diagnostics ──
 
 @app.route("/health")
 def health():
@@ -118,11 +146,20 @@ def health():
     return f"OK — {count} items"
 
 
-# ── Favicon (ponytail: browser auto-requests /favicon.ico) ──
+@app.route("/api/rebuild-fts")
+def api_rebuild_fts():
+    """Rebuild the FTS5 full-text search index."""
+    try:
+        count = rebuild_fts_index()
+        return jsonify({"status": "ok", "indexed": count})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ── Favicon ──
 
 @app.route("/favicon.ico")
 def favicon():
-    # Return a 1x1 transparent PNG to avoid 404s / broken .ico crashes
     return (
         b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\xdac\x60\x00\x00\x00\x02\x00\x01\xe2!\xbc3\x00\x00\x00\x00IEND\xaeB`\x82',
         200,

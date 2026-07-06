@@ -9,7 +9,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
-    /* ── Reset & Base ── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
       --bg:       #0a0a0f;
@@ -37,13 +36,11 @@
       -webkit-font-smoothing: antialiased;
     }
 
-    /* ── Scrollbar ── */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: var(--border-h); border-radius: 3px; }
     ::-webkit-scrollbar-thumb:hover { background: var(--text3); }
 
-    /* ── Top Bar ── */
     .topbar {
       position: sticky; top: 0; z-index: 50;
       background: rgba(10,10,15,0.85);
@@ -102,13 +99,11 @@
     .btn-spin svg { transition: transform 0.6s ease; }
     .btn-spinning svg { transform: rotate(360deg); }
 
-    /* ── Layout ── */
     .layout {
       max-width: 960px; margin: 0 auto;
       padding: 24px 24px 80px;
     }
 
-    /* ── Search ── */
     .search-wrap { position: relative; margin-bottom: 20px; }
     .search-wrap svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text3); pointer-events: none; }
     .search-input {
@@ -124,7 +119,6 @@
     .search-input::placeholder { color: var(--text3); }
     .search-input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-dim); }
 
-    /* ── Filter Row ── */
     .filter-row {
       display: flex; align-items: center; gap: 10px;
       margin-bottom: 20px; flex-wrap: wrap;
@@ -134,7 +128,6 @@
       color: var(--text3); white-space: nowrap;
     }
 
-    /* Category pills */
     .cat-pills { display: flex; gap: 6px; flex-wrap: wrap; }
     .cat-pill {
       padding: 5px 12px; border-radius: 20px;
@@ -150,7 +143,6 @@
       border-color: var(--brand);
     }
 
-    /* Feed dropdown */
     .feed-select {
       padding: 5px 28px 5px 12px;
       border-radius: 20px; font-size: 12px; font-weight: 500;
@@ -164,7 +156,6 @@
     .feed-select:hover { border-color: var(--border-h); color: var(--text); }
     .feed-select:focus { outline: none; border-color: var(--brand); }
 
-    /* ── Item Card ── */
     .items-list { display: flex; flex-direction: column; gap: 6px; }
 
     .item-card {
@@ -226,7 +217,6 @@
     .fresh-badge.new { background: #f43f5e20; color: var(--red); }
     .fresh-badge.today { background: #f59e0b20; color: var(--amber); }
 
-    /* ── States ── */
     .hidden { display: none !important; }
     .state-empty, .state-loading {
       display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -250,7 +240,32 @@
 
     .keyword-hl { background: rgba(245,158,11,0.25); color: var(--amber); padding: 0 2px; border-radius: 2px; }
 
-    /* ── Responsive ── */
+    .load-more-wrap {
+      display: flex; justify-content: center; padding: 24px 0;
+    }
+    .load-more {
+      padding: 10px 28px; border-radius: 8px;
+      font-size: 13px; font-weight: 500; font-family: inherit;
+      border: 1px solid var(--border);
+      background: var(--surface2); color: var(--text2);
+      cursor: pointer; transition: all var(--transition);
+    }
+    .load-more:hover { background: var(--border); color: var(--text); border-color: var(--border-h); }
+    .load-more:disabled { opacity: 0.5; cursor: default; }
+
+    .loading-spinner {
+      display: flex; justify-content: center; padding: 24px 0;
+    }
+    .loading-spinner svg {
+      width: 24px; height: 24px;
+      animation: spin 0.8s linear infinite;
+      color: var(--text3);
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
     @media (max-width: 640px) {
       .topbar-inner { padding: 12px 16px; }
       .layout { padding: 16px 16px 60px; }
@@ -262,7 +277,6 @@
 </head>
 <body>
 
-  <!-- Top Bar -->
   <div class="topbar">
     <div class="topbar-inner">
       <div class="logo">
@@ -296,13 +310,11 @@
 
   <div class="layout">
 
-    <!-- Search -->
     <div class="search-wrap">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
       <input id="search" type="text" placeholder="搜索 AI 研究、模型发布、技术动态…" class="search-input" oninput="debounceRender()">
     </div>
 
-    <!-- Filters -->
     <div class="filter-row">
       <span class="filter-label">分类</span>
       <div class="cat-pills">
@@ -324,7 +336,6 @@
       <span id="result-count" style="font-size:12px; color:var(--text3); margin-left: auto;"></span>
     </div>
 
-    <!-- Loading skeleton -->
     <div id="loading" class="hidden">
       <div class="items-list">
         <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
@@ -332,10 +343,16 @@
       </div>
     </div>
 
-    <!-- Items -->
     <div id="items" class="items-list"></div>
 
-    <!-- Empty -->
+    <div id="load-more-wrap" class="load-more-wrap hidden">
+      <button class="load-more" id="btn-load-more" onclick="loadMore()">加载更多</button>
+    </div>
+
+    <div id="loading-more" class="loading-spinner hidden">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+    </div>
+
     <div id="empty" class="state-empty hidden">
       <div class="state-empty-icon">📭</div>
       <div class="state-empty-title">暂无数据</div>
@@ -350,8 +367,12 @@
     let currentYear = '2026';
     let debounceTimer;
     let abortController;
+    let allItems = [];
+    let totalCount = 0;
+    let currentOffset = 0;
+    const PAGE_SIZE = 50;
+    let isLoadingMore = false;
 
-    // Safely strip HTML tags and return plain text
     function stripHtml(html) {
       if (!html) return '';
       const tmp = document.createElement('div');
@@ -359,7 +380,6 @@
       return tmp.textContent || tmp.innerText || '';
     }
 
-    // Escape HTML special chars to prevent XSS and broken DOM
     function escapeHtml(text) {
       if (!text) return '';
       const div = document.createElement('div');
@@ -367,29 +387,36 @@
       return div.innerHTML;
     }
 
-    async function render() {
+    async function render(reset = true) {
       const itemsEl = document.getElementById('items');
       const emptyEl = document.getElementById('empty');
       const loadingEl = document.getElementById('loading');
       const countEl = document.getElementById('result-count');
+      const loadMoreWrap = document.getElementById('load-more-wrap');
 
-      if (abortController) abortController.abort();
-      abortController = new AbortController();
+      if (reset) {
+        allItems = [];
+        currentOffset = 0;
 
-      loadingEl.classList.remove('hidden');
-      emptyEl.classList.add('hidden');
-      itemsEl.innerHTML = '';
+        if (abortController) abortController.abort();
+        abortController = new AbortController();
 
-      const params = new URLSearchParams({ limit: 3000 });
+        loadingEl.classList.remove('hidden');
+        emptyEl.classList.add('hidden');
+        itemsEl.innerHTML = '';
+        loadMoreWrap.classList.add('hidden');
+      }
+
+      const params = new URLSearchParams({ limit: PAGE_SIZE, offset: currentOffset });
       if (currentFeed) params.set('feed', currentFeed);
       else if (currentCategory) params.set('category', currentCategory);
       if (currentSearch) params.set('q', currentSearch);
       if (currentYear) params.set('year', currentYear);
 
-      let items = [];
+      let data;
       try {
         const res = await fetch(`/api/items?${params}`, { signal: abortController.signal });
-        items = await res.json();
+        data = await res.json();
       } catch (e) {
         if (e.name === 'AbortError') return;
         itemsEl.innerHTML = '<div style="color:var(--red);text-align:center;padding:40px;">加载失败，请确认服务已启动</div>';
@@ -398,9 +425,14 @@
       }
 
       loadingEl.classList.add('hidden');
-      countEl.textContent = items.length ? `${items.length} 条结果` : '';
 
-      if (!items.length) {
+      const items = data.items || [];
+      totalCount = data.total || 0;
+      allItems = reset ? items : allItems.concat(items);
+
+      countEl.textContent = totalCount ? `${totalCount} 条结果` : '';
+
+      if (!allItems.length) {
         emptyEl.classList.remove('hidden');
         return;
       }
@@ -408,7 +440,7 @@
       const searchTerm = currentSearch.toLowerCase();
       const now = Date.now();
 
-      itemsEl.innerHTML = items.map(item => {
+      const html = items.map(item => {
         const title = item.title || '(no title)';
         const feed = item.feed_name || '';
         const summaryRaw = stripHtml(item.summary || '');
@@ -417,7 +449,6 @@
         const published = item.published || '';
         const publishedTs = item.published_ts || '';
 
-        // Freshness badge
         let freshBadge = '';
         if (publishedTs) {
           const pubTime = new Date(publishedTs).getTime();
@@ -426,7 +457,6 @@
           else if (diffH < 24) { freshBadge = '<span class="fresh-badge today">今日</span>'; }
         }
 
-        // Time display
         let timeStr = '';
         if (publishedTs) {
           const d = new Date(publishedTs);
@@ -462,19 +492,32 @@
           </a>
         `;
       }).join('');
+
+      if (reset) {
+        itemsEl.innerHTML = html;
+      } else {
+        itemsEl.insertAdjacentHTML('beforeend', html);
+      }
+
+      // Show/hide "load more" button
+      if (allItems.length < totalCount) {
+        loadMoreWrap.classList.remove('hidden');
+      } else {
+        loadMoreWrap.classList.add('hidden');
+      }
     }
 
     function debounceRender() {
       clearTimeout(debounceTimer);
       currentSearch = document.getElementById('search').value.trim();
-      debounceTimer = setTimeout(render, 200);
+      debounceTimer = setTimeout(() => render(true), 300);
     }
 
     function setFeed(val) {
       currentFeed = val;
       currentCategory = '';
       document.querySelectorAll('.cat-pill').forEach(b => b.classList.toggle('active', b.dataset.cat === ''));
-      render();
+      render(true);
     }
 
     function setCategory(cat) {
@@ -482,14 +525,30 @@
       currentFeed = '';
       document.getElementById('feed-select').value = '';
       document.querySelectorAll('.cat-pill').forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
-      render();
+      render(true);
     }
 
     function setYear(year) {
       currentYear = year;
       document.getElementById('year-select').value = year;
       updateStats();
-      render();
+      render(true);
+    }
+
+    async function loadMore() {
+      if (isLoadingMore) return;
+      isLoadingMore = true;
+      currentOffset += PAGE_SIZE;
+
+      const loadMoreWrap = document.getElementById('load-more-wrap');
+      const loadingMore = document.getElementById('loading-more');
+      loadMoreWrap.classList.add('hidden');
+      loadingMore.classList.remove('hidden');
+
+      await render(false);
+
+      loadingMore.classList.add('hidden');
+      isLoadingMore = false;
     }
 
     async function updateStats() {
@@ -510,14 +569,27 @@
       setTimeout(() => {
         btn.classList.remove('btn-spin');
         updateStats();
-        render();
+        render(true);
       }, 1200);
     }
+
+    // ── Infinite scroll via IntersectionObserver ──
+    const sentinel = document.createElement('div');
+    sentinel.id = 'sentinel';
+    sentinel.style.height = '1px';
+    document.querySelector('.layout').appendChild(sentinel);
+
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && allItems.length < totalCount && !isLoadingMore) {
+        loadMore();
+      }
+    }, { rootMargin: '200px' });
+    observer.observe(sentinel);
 
     // ── Init ──
     document.getElementById('year-select').value = currentYear;
     updateStats();
-    render();
+    render(true);
   </script>
 </body>
 </html>
