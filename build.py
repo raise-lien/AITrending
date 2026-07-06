@@ -172,6 +172,8 @@ def build_static_html(template):
     # Replace the entire <script> section with our static version
     new_script = """  <script>
     // ── Static site: all data loaded from local JSON files ──
+    // Detect base path for GitHub Pages subdirectory deployment
+    const BASE_URL = window.location.pathname.replace(/\\/[^\\/]*$/, '/') ;
     let ALL_ITEMS = [];
     let META = {};
     let currentFeed = '';
@@ -187,8 +189,8 @@ def build_static_html(template):
     async function initData() {
       try {
         const [itemsRes, metaRes] = await Promise.all([
-          fetch('data/items.json'),
-          fetch('data/meta.json')
+          fetch(BASE_URL + 'data/items.json'),
+          fetch(BASE_URL + 'data/meta.json')
         ]);
         ALL_ITEMS = await itemsRes.json();
         META = await metaRes.json();
