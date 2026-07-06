@@ -1,0 +1,81 @@
+name: Build and Deploy to GitHub Pages
+
+on:
+  # Cron: every 2 hours (UTC 00:00, 02:00, 04:00, ...)
+  schedule:
+    - cron: '0 */2 * * *'
+  # Manual trigger
+  workflow_dispatch:
+  # Auto deploy on push to main (only if code changed)
+  push:
+    branches: [main]
+    paths:
+      - 'app.py'
+      - 'db.py'
+      - 'fetcher.py'
+      - 'build.py'
+      - 'feeds.json'
+      - 'templates/**'
+      - 'requirements.txt'
+      - '.github/workflows/deploy.yml'
+
+# GitHub Pages permissions
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one deployment at a time
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Fetch RSS feeds and build static site
+        run: python build.py
+        env:
+          PYTHONUNBUFFERED: '1'
+
+      - name: Verify build output
+        run: |
+          echo "=== Build output ==="
+          ls -la docs/
+          ls -la docs/data/
+          echo "=== Item count ==="
+          python -c "import json; d=json.load(open('docs/data/items.json')); print(f'Items: {len(d)}')"
+          python -c "import json; d=json.load(open('docs/data/meta.json')); print(f'Feeds: {len(d[\"feeds\"])}, Total: {d[\"total_items\"]}')"
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
