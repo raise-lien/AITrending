@@ -129,11 +129,16 @@ def generate_html():
     with open(template_path, "r", encoding="utf-8") as f:
         html = f.read()
 
-    # Copy favicon to docs/
+    # Copy favicon + shared stylesheet to docs/
+    import shutil
     favicon_src = os.path.join(os.path.dirname(__file__), "static", "favicon.svg")
     if os.path.exists(favicon_src):
-        import shutil
         shutil.copy(favicon_src, os.path.join(DIST_DIR, "favicon.svg"))
+
+    css_src = os.path.join(os.path.dirname(__file__), "static", "styles", "app.css")
+    if os.path.exists(css_src):
+        os.makedirs(os.path.join(DIST_DIR, "styles"), exist_ok=True)
+        shutil.copy(css_src, os.path.join(DIST_DIR, "styles", "app.css"))
 
     out_path = os.path.join(DIST_DIR, "index.html")
     with open(out_path, "w", encoding="utf-8") as f:
@@ -160,6 +165,7 @@ def main():
     print("\n=== Build complete ===")
     print(f"Output: {DIST_DIR}/")
     print(f"  index.html")
+    print(f"  styles/app.css")
     print(f"  data/items.json ({len(items)} items)")
     print(f"  data/meta.json")
     print(f"  favicon.svg")
