@@ -1,7 +1,8 @@
 # AITrending — AI 信息聚合面板
-# 依赖: feedparser, flask, apscheduler (定时抓取)
+# 依赖: feedparser, flask, apscheduler (定时抓取), DeepSeek 摘要
 
 feedparser>=6.0
 flask>=3.0
 apscheduler>=3.10
 httpx>=0.25
+python-dotenv>=1.0
