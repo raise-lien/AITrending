@@ -19,7 +19,7 @@ AITrending 做两件事：
 | 模式 | 适合 | 做什么 |
 |------|------|--------|
 | **信息流** | 深挖、检索、回溯 | 多源入库，按分类 / 来源 / 年份筛选，全文搜索 |
-| **今日简报** | 通勤 / 晨间 5 分钟 | DeepSeek 从候选里 round-robin 选稿，输出中文头条 + 要点 + **Idea Sparks** |
+| **今日简报** | 通勤 / 晨间 5 分钟 | DeepSeek 按信源权重 + 同源去重选稿，一次调用同时产出中文头条 + 要点 + **Idea Sparks** |
 
 它**不是**通用新闻站，也**不是**财经行情面板——只服务「跟 AI 相关的人」：研究者、工程师、产品、投资看行业的人。
 
@@ -29,8 +29,9 @@ AITrending 做两件事：
 
 - **41 个数据源 · 9 类**：公司博客、学术论文、学术研究、行业媒体、个人博客、Newsletter、AI 安全、中文媒体、开源热榜
 - **非 RSS 信号**：GitHub Trending、HuggingFace 热门论文、X AI 热帖（公开 API，无需 Twitter key）
-- **今日简报**：中文 headline / overview / briefs / keywords；并附带 **Idea Sparks**（信号→机会→方案→MVP）；本地可随时重生，Pages 随 Actions 更新
+- **今日简报**：中文 headline / overview / briefs / keywords；并附带 **Idea Sparks**（信号→机会→方案→MVP，含建议技术栈 / 可借力开源 / 预计工作量 / 四维评分）；支持按视角（PM·设计·工程·投资人）筛选、按评分排序、卡片折叠与「复制为 README」；本地可随时重生，Pages 随 Actions 更新
 - **可读体验**：分类色点、新鲜度（NEW / 今日）、今天·本周·更早分组、深浅色主题
+- **选稿与生成**：`feeds.json` 支持 `weight` 字段（权威源权重更高）；选稿先做同源事件去重再按权重分配名额；简报与 Idea Sparks 合并为单次 LLM 调用，省一半成本与耗时
 - **工程向**：源可 `enabled` / `type` / `use_curl`；单源失败不拖垮；`dry-run` 验活；抓取日志与健康 API
 
 ---
@@ -138,6 +139,7 @@ python build.py              # 本地打静态包（需 key 才会写 digest）
 | `DEEPSEEK_API_KEY` | 简报 / 摘要必填（本地 `.env` 或 Actions Secret） |
 | `LLM_MODEL` | 默认 `deepseek-chat` |
 | `LLM_BASE_URL` | 默认 `https://api.deepseek.com/v1`；可换兼容中转 |
+| `LLM_SEED` | 可选整数；固定后同日重生成简报内容更稳定（减少漂移） |
 | `DIGEST_HOUR` | 本地自动生成简报的小时（默认 `8`） |
 | `PORT` | Flask 端口（默认 `5003`） |
 

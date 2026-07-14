@@ -363,7 +363,150 @@
       if (view === 'digest') renderDigest(DIGEST);
     }
 
+    // ── Idea Sparks 交互状态 ──
+    var currentDigest = null;
+    var ideaFull = [];
+    var ideaLinkIdx = {};
+    var ideaFilter = 'all';
+    var ideaSort = 'composite';
+    var ideaRenderList = [];
+
+    var IDEA_FILTERS = [
+      { k: 'all', label: '全部' }, { k: 'pm', label: 'PM' },
+      { k: 'designer', label: '设计' }, { k: 'engineer', label: '工程' },
+      { k: 'investor', label: '投资人' }
+    ];
+    function perspLabel(p) {
+      var m = { pm: 'PM', designer: '设计', engineer: '工程', investor: '投资人' };
+      return m[p] || (p || '');
+    }
+    function scoreBar(label, val) {
+      if (typeof val !== 'number' || val < 1 || val > 5) return '';
+      return '<div class="score-bar"><span class="score-bar-label">' + label + '</span>' +
+        '<span class="score-bar-track"><span class="score-bar-fill" style="width:' + (val * 20) + '%"></span></span>' +
+        '<span class="score-bar-val">' + val + '/5</span></div>';
+    }
+    function signalLinkHtml(url) {
+      var info = ideaLinkIdx[url];
+      var label = (info && info.source)
+        ? escapeHtml(info.source) + (info.title ? ' · ' + escapeHtml(info.title) : '')
+        : escapeHtml(url);
+      return '<a href="' + escapeHtml(url) + '" target="_blank" rel="noopener" title="' + escapeHtml(url) + '">' + label + '</a>';
+    }
+    function ideaCardHtml(s, idx) {
+      var scores = s.scores || {};
+      var persp = perspLabel(s.perspective);
+      var assumptions = (s.assumptions || []).map(function(a) { return '<li>' + escapeHtml(a) + '</li>'; }).join('');
+      var links = (s.signal_urls || []).slice(0, 3).map(function(u) { return signalLinkHtml(u); }).join('');
+      var stackRow = s.stack ? '<p class="idea-row"><span class="idea-label">技术栈</span>' + escapeHtml(s.stack) + '</p>' : '';
+      var reuseRow = (s.reuse && s.reuse !== '无') ? '<p class="idea-row"><span class="idea-label">可借力</span>' + escapeHtml(s.reuse) + '</p>' : '';
+      var effortRow = s.effort ? '<p class="idea-row idea-row--muted"><span class="idea-label">工作量</span>' + escapeHtml(s.effort) + '</p>' : '';
+      return '<article class="idea-card" data-persp="' + escapeHtml(s.perspective || '') + '">' +
+        '<div class="idea-card-top">' +
+          '<span class="idea-rank">' + (idx + 1) + '</span>' +
+          (persp ? '<span class="idea-persp">' + escapeHtml(persp) + '</span>' : '') +
+          '<button class="idea-toggle" type="button" onclick="toggleIdea(this)" aria-expanded="false">展开</button>' +
+        '</div>' +
+        '<h3 class="idea-name">' + escapeHtml(s.name || '') + '</h3>' +
+        '<p class="idea-oneliner">' + escapeHtml(s.one_liner || '') + '</p>' +
+        (s.mvp ? '<p class="idea-mvp"><span class="idea-label">MVP</span>' + escapeHtml(s.mvp) + '</p>' : '') +
+        '<div class="idea-scores">' + scoreBar('新意', scores.novelty) + scoreBar('可行', scores.feasibility) + scoreBar('影响', scores.impact) + '</div>' +
+        (links ? '<div class="idea-links">' + links + '</div>' : '') +
+        '<div class="idea-details hidden">' +
+          (s.opportunity ? '<p class="idea-row"><span class="idea-label">机会</span>' + escapeHtml(s.opportunity) + '</p>' : '') +
+          (s.solution ? '<p class="idea-row"><span class="idea-label">方案</span>' + escapeHtml(s.solution) + '</p>' : '') +
+          (s.why_now ? '<p class="idea-row idea-row--muted"><span class="idea-label">为何现在</span>' + escapeHtml(s.why_now) + '</p>' : '') +
+          (s.signal ? '<p class="idea-row idea-row--muted"><span class="idea-label">信号</span>' + escapeHtml(s.signal) + '</p>' : '') +
+          stackRow + reuseRow + effortRow +
+          (assumptions ? '<ul class="idea-assumptions">' + assumptions + '</ul>' : '') +
+        '</div>' +
+        '<div class="idea-actions"><button class="idea-copy" type="button" onclick="copyIdeaAsReadme(' + idx + ')">复制为 README</button></div>' +
+      '</article>';
+    }
+    function toggleIdea(btn) {
+      var card = btn.closest('.idea-card');
+      if (!card) return;
+      var expanded = card.classList.toggle('expanded');
+      btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      btn.textContent = expanded ? '收起' : '展开';
+    }
+    function copyIdeaAsReadme(idx) {
+      var s = ideaRenderList[idx];
+      if (!s) return;
+      function li(u) {
+        var info = ideaLinkIdx[u];
+        return (info && info.source) ? '- ' + info.source + ' · ' + (info.title || u) : '- ' + u;
+      }
+      var L = [];
+      L.push('# ' + (s.name || '未命名 idea'), '');
+      if (s.one_liner) L.push('> ' + s.one_liner, '');
+      if (s.mvp) L.push('## 48h MVP', s.mvp, '');
+      if (s.opportunity) L.push('## 机会', s.opportunity, '');
+      if (s.solution) L.push('## 方案', s.solution, '');
+      if (s.why_now) L.push('## 为何现在', s.why_now, '');
+      if (s.stack) L.push('## 建议技术栈', s.stack, '');
+      if (s.reuse && s.reuse !== '无') L.push('## 可借力', s.reuse, '');
+      if (s.effort) L.push('## 预计工作量', s.effort, '');
+      var scores = s.scores || {};
+      var sc = [];
+      if (typeof scores.novelty === 'number') sc.push('新意 ' + scores.novelty);
+      if (typeof scores.feasibility === 'number') sc.push('可行 ' + scores.feasibility);
+      if (typeof scores.impact === 'number') sc.push('影响 ' + scores.impact);
+      if (sc.length) L.push('## 评分', sc.join(' / '), '');
+      if ((s.assumptions || []).length) L.push('## 待验证假设', s.assumptions.map(function(a){return '- ' + a;}).join('\n'), '');
+      if ((s.signal_urls || []).length) L.push('## 信号来源', s.signal_urls.map(li).join('\n'), '');
+      var md = L.join('\n');
+      function done() {
+        var btns = document.querySelectorAll('.idea-copy');
+        var b = btns[idx];
+        if (b) { var t = b.textContent; b.textContent = '已复制 ✓'; setTimeout(function(){ b.textContent = t; }, 1500); }
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(md).then(done).catch(function(){ fallbackCopy(md); });
+      } else { fallbackCopy(md); }
+    }
+    function fallbackCopy(text) {
+      var ta = document.createElement('textarea');
+      ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); } catch (_) {}
+      document.body.removeChild(ta);
+    }
+    function ideaToolbarHtml() {
+      var pills = IDEA_FILTERS.map(function(f) {
+        return '<button class="idea-pill ' + (ideaFilter === f.k ? 'active' : '') + '" type="button" data-filter="' + f.k + '" onclick="setIdeaFilter(\'' + f.k + '\')">' + f.label + '</button>';
+      }).join('');
+      return '<div class="idea-toolbar"><div class="idea-pills">' + pills + '</div>' +
+        '<select class="idea-sort" onchange="setIdeaSort(this.value)" aria-label="按评分排序">' +
+        '<option value="composite"' + (ideaSort === 'composite' ? ' selected' : '') + '>综合排序</option>' +
+        '<option value="novelty"' + (ideaSort === 'novelty' ? ' selected' : '') + '>按新意</option>' +
+        '<option value="feasibility"' + (ideaSort === 'feasibility' ? ' selected' : '') + '>按可行</option>' +
+        '<option value="impact"' + (ideaSort === 'impact' ? ' selected' : '') + '>按影响</option>' +
+        '</select></div>';
+    }
+    function ideaSectionHtml() {
+      var list = ideaFull.slice();
+      if (ideaFilter !== 'all') list = list.filter(function(s) { return s.perspective === ideaFilter; });
+      function valOf(s, k) { return (s.scores && typeof s.scores[k] === 'number') ? s.scores[k] : 0; }
+      if (ideaSort === 'novelty') list.sort(function(a, b) { return valOf(b, 'novelty') - valOf(a, 'novelty'); });
+      else if (ideaSort === 'feasibility') list.sort(function(a, b) { return valOf(b, 'feasibility') - valOf(a, 'feasibility'); });
+      else if (ideaSort === 'impact') list.sort(function(a, b) { return valOf(b, 'impact') - valOf(a, 'impact'); });
+      else list.sort(function(a, b) { return (valOf(b, 'novelty') + valOf(b, 'impact')) - (valOf(a, 'novelty') + valOf(a, 'impact')); });
+      ideaRenderList = list;
+      var cards = list.map(function(s, i) { return ideaCardHtml(s, i); }).join('');
+      return '<section class="digest-ideas" id="digest-ideas">' +
+        '<div class="digest-ideas-head"><h2 class="digest-section-title">今日 Idea Sparks</h2>' +
+        '<p class="digest-section-desc">从信息洪流里挖可验证的项目方向（信号 → 机会 → 方案 → MVP）</p></div>' +
+        ideaToolbarHtml() +
+        '<div class="idea-grid">' + (cards || '<p class="idea-empty">该视角下暂无 idea</p>') + '</div>' +
+        (currentDigest && currentDigest.idea_note ? '<p class="idea-note">' + escapeHtml(currentDigest.idea_note) + '</p>' : '') +
+        '</section>';
+    }
+    function setIdeaFilter(k) { ideaFilter = k; var el = document.getElementById('digest-ideas'); if (el) el.outerHTML = ideaSectionHtml(); }
+    function setIdeaSort(v) { ideaSort = v; var el = document.getElementById('digest-ideas'); if (el) el.outerHTML = ideaSectionHtml(); }
+
     function renderDigest(data) {
+      currentDigest = data;
       var emptyEl = document.getElementById('digest-empty');
       var contentEl = document.getElementById('digest-content');
       var metaEl = document.getElementById('digest-meta');
@@ -376,6 +519,11 @@
       emptyEl.classList.add('hidden');
       contentEl.classList.remove('hidden');
       metaEl.textContent = (data.date || '') + (data.model ? ' · ' + data.model : '');
+
+      ideaFull = data.idea_sparks || [];
+      ideaLinkIdx = data.link_index || {};
+      ideaFilter = 'all';
+      ideaSort = 'composite';
 
       var keywords = (data.keywords || []).map(function(k) {
         return '<span class="digest-kw">' + escapeHtml(k) + '</span>';
@@ -396,52 +544,6 @@
             '</div></div></a>';
       }).join('');
 
-      var sparks = data.idea_sparks || [];
-      var sparkHtml = sparks.map(function(s, i) {
-        var scores = s.scores || {};
-        var scoreBits = [
-          scores.novelty ? '新意 ' + scores.novelty : '',
-          scores.feasibility ? '可行 ' + scores.feasibility : '',
-          scores.impact ? '影响 ' + scores.impact : ''
-        ].filter(Boolean).join(' · ');
-        var perspMap = { pm: 'PM', designer: '设计', engineer: '工程' };
-        var persp = perspMap[s.perspective] || (s.perspective || '');
-        var assumptions = (s.assumptions || []).map(function(a) {
-          return '<li>' + escapeHtml(a) + '</li>';
-        }).join('');
-        var links = (s.signal_urls || []).slice(0, 3).map(function(u, j) {
-          return '<a href="' + escapeHtml(u) + '" target="_blank" rel="noopener">信号 ' + (j + 1) + '</a>';
-        }).join('');
-        return '<article class="idea-card">' +
-          '<div class="idea-card-top">' +
-            '<span class="idea-rank">' + (i + 1) + '</span>' +
-            (persp ? '<span class="idea-persp">' + escapeHtml(persp) + '</span>' : '') +
-          '</div>' +
-          '<h3 class="idea-name">' + escapeHtml(s.name || '') + '</h3>' +
-          '<p class="idea-oneliner">' + escapeHtml(s.one_liner || '') + '</p>' +
-          (s.opportunity ? '<p class="idea-row"><span class="idea-label">机会</span>' + escapeHtml(s.opportunity) + '</p>' : '') +
-          (s.solution ? '<p class="idea-row"><span class="idea-label">方案</span>' + escapeHtml(s.solution) + '</p>' : '') +
-          (s.mvp ? '<p class="idea-row"><span class="idea-label">MVP</span>' + escapeHtml(s.mvp) + '</p>' : '') +
-          (s.why_now ? '<p class="idea-row idea-row--muted"><span class="idea-label">为何现在</span>' + escapeHtml(s.why_now) + '</p>' : '') +
-          (s.signal ? '<p class="idea-row idea-row--muted"><span class="idea-label">信号</span>' + escapeHtml(s.signal) + '</p>' : '') +
-          (assumptions ? '<ul class="idea-assumptions">' + assumptions + '</ul>' : '') +
-          '<div class="idea-card-meta">' +
-            (scoreBits ? '<span>' + escapeHtml(scoreBits) + '</span>' : '') +
-            (links ? '<span class="idea-links">' + links + '</span>' : '') +
-          '</div></article>';
-      }).join('');
-
-      var ideasSection = sparks.length
-        ? '<section class="digest-ideas">' +
-            '<div class="digest-ideas-head">' +
-              '<h2 class="digest-section-title">今日 Idea Sparks</h2>' +
-              '<p class="digest-section-desc">从信息洪流里挖可验证的项目方向（信号 → 机会 → 方案 → MVP）</p>' +
-            '</div>' +
-            '<div class="idea-grid">' + sparkHtml + '</div>' +
-            (data.idea_note ? '<p class="idea-note">' + escapeHtml(data.idea_note) + '</p>' : '') +
-          '</section>'
-        : '';
-
       contentEl.innerHTML =
         '<header class="digest-hero">' +
           '<p class="digest-kicker">AI Daily Brief</p>' +
@@ -449,7 +551,7 @@
           '<p class="digest-overview">' + escapeHtml(data.daily_overview || '') + '</p>' +
           (keywords ? '<div class="digest-keywords">' + keywords + '</div>' : '') +
         '</header>' +
-        ideasSection +
+        ideaSectionHtml() +
         '<section class="digest-briefs-wrap">' +
           '<h2 class="digest-section-title">要点速览</h2>' +
           '<div class="digest-briefs">' + briefHtml + '</div>' +

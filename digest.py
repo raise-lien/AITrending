@@ -35,14 +35,122 @@ def _today_key() -> str:
     return datetime.now().strftime("%Y-%m-%d")
 
 
+def _feed_weights() -> dict[str, float]:
+    """Map feed_name -> weight (from feeds.json `weight`, default 1)."""
+    try:
+        from fetcher import load_feeds
+        feeds = load_feeds(include_disabled=True)
+    except Exception:
+        return {}
+    w: dict[str, float] = {}
+    for f in feeds:
+        try:
+            val = float(f.get("weight", 1) or 1)
+        except (TypeError, ValueError):
+            val = 1.0
+        if val <= 0:
+            val = 1.0
+        w[f["name"]] = val
+    return w
+
+
+def _title_trigrams(text: str) -> set[str]:
+    t = re.sub(r"[^a-z0-9\u4e00-\u9fff]", "", (text or "").lower())
+    if len(t) < 6:
+        return set()
+    return {t[i : i + 3] for i in range(len(t) - 2)}
+
+
+def _dedup_items(items: list[dict], weights: dict[str, float]) -> list[dict]:
+    """Cluster near-duplicate headlines (same event across sources) and keep the
+    highest-weight source's item as the representative, freeing quota for
+    heterogeneous signals."""
+    sigs = [_title_trigrams(it.get("title") or "") for it in items]
+    used = [False] * len(items)
+    keep: list[dict] = []
+    order = sorted(
+        range(len(items)),
+        key=lambda i: -weights.get(items[i].get("feed_name", ""), 1.0),
+    )
+    for i in order:
+        if used[i]:
+            continue
+        used[i] = True
+        cluster = [i]
+        for j in range(len(items)):
+            if used[j] or not sigs[i] or not sigs[j]:
+                continue
+            union = sigs[i] | sigs[j]
+            if union and len(sigs[i] & sigs[j]) / len(union) >= 0.55:
+                used[j] = True
+                cluster.append(j)
+        keep.append(items[cluster[0]])
+    return keep
+
+
+def _weighted_round_robin(
+    by_feed: dict[str, list], weights: dict[str, float], total_limit: int
+) -> list[dict]:
+    """Allocate the quota across feeds proportionally to their weight, then
+    interleave so each feed's items land near their ideal evenly-spaced
+    positions (no long runs, good mixing).
+
+    Two steps:
+      1. target count per feed = weight / sum(weights) * total_limit
+         (largest-remainder rounding), capped by how many items the feed has.
+      2. place each feed's items at their ideal slot via a greedy
+         "least-behind-ideal-position" scan — deterministic and well spread."""
+    feeds = [n for n, b in by_feed.items() if b]
+    if not feeds:
+        return []
+    w = {n: max(float(weights.get(n, 1.0)), 1e-4) for n in feeds}
+    total_w = sum(w.values())
+
+    # 1) proportional target counts (largest remainder)
+    raw = {n: w[n] / total_w * total_limit for n in feeds}
+    counts = {n: min(int(raw[n]), len(by_feed[n])) for n in feeds}
+    # give any leftover quota to feeds that still have items, by fractional part
+    rem = total_limit - sum(counts.values())
+    order_extra = sorted(feeds, key=lambda n: (raw[n] - counts[n], w[n]), reverse=True)
+    idx = 0
+    while rem > 0:
+        n = order_extra[idx % len(order_extra)]
+        if counts[n] < len(by_feed[n]):
+            counts[n] += 1
+            rem -= 1
+        idx += 1
+        if all(counts[n] >= len(by_feed[n]) for n in feeds):
+            break
+
+    # 2) interleave by ideal position
+    placed = {n: 0 for n in feeds}
+    total = sum(counts.values())
+    selected: list[dict] = []
+    for k in range(total):
+        best, best_ideal = None, None
+        for n in feeds:
+            if placed[n] >= counts[n]:
+                continue
+            j = placed[n]  # index of the next item to place
+            ideal = (j + 0.5) * total / counts[n] if counts[n] else 0
+            if best is None or ideal < best_ideal:
+                best, best_ideal = n, ideal
+        if best is None:
+            break
+        selected.append(by_feed[best].pop(0))
+        placed[best] += 1
+    return selected
+
+
 def select_candidates(
     hours: int = 48,
     per_category_limit: int = 8,
     total_limit: int = 40,
 ) -> list[dict]:
     """
-    Round-robin select recent items across feed_names so no single source
-    monopolizes the digest quota.
+    Select recent items: drop cross-source duplicates, then weighted
+    round-robin across feed_names so authoritative sources get more slots
+    without monopolizing the digest quota.
     """
     init_db()
     cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).strftime(
@@ -63,23 +171,17 @@ def select_candidates(
     finally:
         conn.close()
 
-    by_feed: dict[str, list] = defaultdict(list)
-    for r in rows:
-        by_feed[r["feed_name"]].append(dict(r))
+    items = [dict(r) for r in rows]
+    weights = _feed_weights()
 
-    # Round-robin
-    buckets = [list(v) for v in by_feed.values()]
-    selected: list[dict] = []
-    made_progress = True
-    while len(selected) < total_limit and made_progress:
-        made_progress = False
-        for b in buckets:
-            if not b:
-                continue
-            selected.append(b.pop(0))
-            made_progress = True
-            if len(selected) >= total_limit:
-                break
+    # 1) Collapse the same event reported by multiple sources
+    deduped = _dedup_items(items, weights)
+
+    # 2) Group by feed, then weighted round-robin
+    by_feed: dict[str, list] = defaultdict(list)
+    for it in deduped:
+        by_feed[it["feed_name"]].append(it)
+    selected = _weighted_round_robin(by_feed, weights, total_limit)
 
     out = []
     for it in selected:
