@@ -145,12 +145,52 @@ DIGEST_SYSTEM = """你是一位资深 AI 行业编辑。根据候选新闻生成
 """
 
 
-def generate_digest_from_candidates(candidates: list[dict]) -> dict:
-    """
-    candidates: [{title, url, source, excerpt, published?}, ...]
-    Returns parsed digest dict.
-    """
-    # Keep payload compact
+# Ideation inspired by:
+# - Product Trio brainstorm (PM / Designer / Engineer) + assumptions to test
+# - Opportunity Solution Tree: signal → opportunity → solution → experiment
+# - Paper/news → product spark (capability unlock, gap, recombination)
+IDEA_SYSTEM = """你是一位面向 AI 开发者与独立开发者的产品发现搭档。
+任务：从「今日 AI 资讯」里挖出可动手验证的项目 idea，而不是复述新闻。
+
+方法（内部推理，不要输出步骤）：
+1. 扫描信号：新能力释放、未满足痛点、论文/开源可产品化、工具链缺口、跨源交叉组合
+2. 用 Opportunity Solution Tree 思维：先写机会（用户视角的问题），再写方案，再写可测实验
+3. 从 Product Trio 三角视角各至少贡献一条思路，再合并优先排序：
+   - PM：市场缺口 / 差异化 / 为何现在
+   - Designer：体验摩擦 / 上手路径
+   - Engineer：可复用 API、数据杠杆、技术红利
+4. 优先：核心价值清晰、48h 可验证、有差异化；拒绝「又一个 ChatGPT 套壳」
+
+要求：
+1. 全部使用简体中文
+2. 只输出一个合法 JSON 对象，不要 markdown，不要解释
+3. 字段：
+{
+  "idea_sparks": [
+    {
+      "name": "短项目名（≤16字）",
+      "one_liner": "一句话价值主张",
+      "signal": "触发该 idea 的今日信号（概括，勿抄标题堆砌）",
+      "signal_urls": ["必须来自输入的原文 url"],
+      "opportunity": "用户机会，用「我希望…/我很难…」句式",
+      "solution": "具体做什么（产品形态，不是口号）",
+      "perspective": "pm 或 designer 或 engineer（主导视角）",
+      "why_now": "为何今天的信息让这件事变得可行/紧迫",
+      "mvp": "一个 48 小时内可做出的最小验证版本",
+      "assumptions": ["最关键的 1-3 条待验证假设"],
+      "scores": {"novelty": 1到5, "feasibility": 1到5, "impact": 1到5}
+    }
+  ],
+  "idea_note": "一句今日机会地图点评（给开发者）"
+}
+4. 输出 5 条 idea_sparks，按 (novelty+impact) 优先、兼顾 feasibility
+5. signal_urls 只能来自输入；每条至少 1 个 url；可交叉引用多条信号
+6. 每条 idea 必须彼此不同；禁止空洞概念（如「用 AI 提升效率」）
+7. 忽略广告与和 AI 产品无关的噪音
+"""
+
+
+def _slim_candidates(candidates: list[dict]) -> list[dict]:
     slim = []
     for c in candidates:
         slim.append({
@@ -160,6 +200,106 @@ def generate_digest_from_candidates(candidates: list[dict]) -> dict:
             "excerpt": (c.get("excerpt") or c.get("summary") or "")[:400],
             "published": c.get("published_ts") or c.get("published") or "",
         })
+    return slim
+
+
+def _normalize_idea_sparks(data: dict) -> dict:
+    sparks = data.get("idea_sparks") or []
+    if not isinstance(sparks, list):
+        sparks = []
+
+    def _score(v) -> int | None:
+        try:
+            n = int(v)
+            return n if 1 <= n <= 5 else None
+        except (TypeError, ValueError):
+            return None
+
+    cleaned = []
+    for s in sparks:
+        if not isinstance(s, dict):
+            continue
+        scores = s.get("scores") if isinstance(s.get("scores"), dict) else {}
+        urls = s.get("signal_urls") or []
+        if not isinstance(urls, list):
+            urls = [urls] if urls else []
+        assumptions = s.get("assumptions") or []
+        if isinstance(assumptions, str):
+            assumptions = [assumptions]
+        persp = str(s.get("perspective") or "pm").strip().lower()
+        if persp not in ("pm", "designer", "engineer"):
+            persp = "pm"
+        cleaned.append({
+            "name": str(s.get("name") or "").strip(),
+            "one_liner": str(s.get("one_liner") or "").strip(),
+            "signal": str(s.get("signal") or "").strip(),
+            "signal_urls": [str(u).strip() for u in urls if u],
+            "opportunity": str(s.get("opportunity") or "").strip(),
+            "solution": str(s.get("solution") or "").strip(),
+            "perspective": persp,
+            "why_now": str(s.get("why_now") or "").strip(),
+            "mvp": str(s.get("mvp") or "").strip(),
+            "assumptions": [str(a).strip() for a in assumptions if a][:3],
+            "scores": {
+                "novelty": _score(scores.get("novelty")),
+                "feasibility": _score(scores.get("feasibility")),
+                "impact": _score(scores.get("impact")),
+            },
+        })
+    cleaned = [s for s in cleaned if s["name"] and s["one_liner"]]
+    return {
+        "idea_sparks": cleaned,
+        "idea_note": str(data.get("idea_note") or "").strip(),
+    }
+
+
+def generate_idea_sparks(
+    candidates: list[dict],
+    briefs: list[dict] | None = None,
+) -> dict:
+    """
+    Turn today's feed signals into actionable project ideas.
+    Returns {idea_sparks: [...], idea_note: str}.
+    """
+    slim = _slim_candidates(candidates)
+    payload: dict[str, Any] = {"candidates": slim}
+    if briefs:
+        payload["briefs"] = [
+            {
+                "title": (b.get("title") or "")[:160],
+                "url": b.get("url") or "",
+                "summary": (b.get("summary") or "")[:280],
+                "importance": b.get("importance"),
+            }
+            for b in briefs[:12]
+            if isinstance(b, dict)
+        ]
+
+    user = (
+        "以下是今日 AI 资讯候选（及可选简报要点）。"
+        "请从中提炼面向 AI 项目开发者的 idea sparks：\n"
+        + json.dumps(payload, ensure_ascii=False)
+    )
+    raw = chat(
+        [
+            {"role": "system", "content": IDEA_SYSTEM},
+            {"role": "user", "content": user},
+        ],
+        temperature=0.55,
+        max_tokens=4500,
+    )
+    data = extract_json(raw)
+    if not isinstance(data, dict):
+        raise RuntimeError("Idea sparks response is not a JSON object")
+    return _normalize_idea_sparks(data)
+
+
+def generate_digest_from_candidates(candidates: list[dict]) -> dict:
+    """
+    candidates: [{title, url, source, excerpt, published?}, ...]
+    Returns parsed digest dict (includes idea_sparks when ideation succeeds).
+    """
+    slim = _slim_candidates(candidates)
 
     user = (
         "以下是今日候选 AI 资讯（JSON）。请生成今日简报：\n"
@@ -182,6 +322,18 @@ def generate_digest_from_candidates(candidates: list[dict]) -> dict:
     data.setdefault("briefs", [])
     data.setdefault("editor_note", "")
     data.setdefault("keywords", [])
+
+    # Second pass: project ideas from the same signal set
+    try:
+        ideas = generate_idea_sparks(candidates, briefs=data.get("briefs") or [])
+        data["idea_sparks"] = ideas.get("idea_sparks") or []
+        data["idea_note"] = ideas.get("idea_note") or ""
+    except Exception as e:
+        # Digest should still succeed if ideation fails
+        data.setdefault("idea_sparks", [])
+        data.setdefault("idea_note", "")
+        print(f"[llm] idea sparks skipped: {e}")
+
     data["_model"] = get_model()
     return data
 

@@ -9,7 +9,7 @@
 
 | 维度 | 现状 |
 |------|------|
-| **定位** | AI 垂直信息聚合 + DeepSeek「今日简报」 |
+| **定位** | AI 垂直信息聚合 + DeepSeek「今日简报」+ Idea Sparks |
 | **数据源** | 41 个启用源（RSS / API / scrape），9 个分类 |
 | **能力** | 信息流筛选搜索 · 每日 Digest · GH Pages 定时部署 |
 | **技术栈** | Flask + SQLite + feedparser + httpx + APScheduler + DeepSeek |
@@ -27,6 +27,7 @@
 | 复合索引 `(feed_name, published_ts)` | ✅ |
 | GitHub Trending / HF Papers / X AI | ✅ |
 | DeepSeek 今日简报 + 静态站导出 | ✅ |
+| Idea Sparks（信号→机会→方案→MVP） | ✅ |
 | `enabled` / `type` / `use_curl` / dry-run | ✅ |
 | UI：信息流 / 简报双视图、light/dark | ✅ 部分落地 |
 
@@ -73,6 +74,11 @@
 ---
 
 ### P1 — 简报与中文体验
+
+#### 4b. Idea Sparks 深化（已落地基础版）
+- **已做**：简报二阶段调用，输出 5 条结构化项目 idea（Product Trio 视角 + OST 链路 + MVP / 假设）。
+- **下一步（可选）**：按用户画像过滤（研究者 / indie hacker）、跨日 idea 去重、一键复制 Markdown。
+- **RICE**：高 Reach · 高 Impact · Effort **S–M**
 
 #### 4. 信息流条目级中文摘要（enrich 流水线）
 - **为什么**：Digest 是「一天一份」；刷信息流时英文原文仍难扫读。

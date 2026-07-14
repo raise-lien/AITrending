@@ -138,6 +138,7 @@ def generate_and_export_digest():
         with open(out_path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, separators=(",", ":"))
         print(f"Digest: {data.get('hero_headline', '')[:60]}")
+        print(f"Idea sparks: {len(data.get('idea_sparks') or [])}")
         return data
     except Exception as e:
         print(f"[WARN] digest generation failed: {e}")

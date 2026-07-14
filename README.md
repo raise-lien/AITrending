@@ -19,7 +19,7 @@ AITrending 做两件事：
 | 模式 | 适合 | 做什么 |
 |------|------|--------|
 | **信息流** | 深挖、检索、回溯 | 多源入库，按分类 / 来源 / 年份筛选，全文搜索 |
-| **今日简报** | 通勤 / 晨间 5 分钟 | DeepSeek 从候选里 round-robin 选稿，输出中文头条 + 要点 |
+| **今日简报** | 通勤 / 晨间 5 分钟 | DeepSeek 从候选里 round-robin 选稿，输出中文头条 + 要点 + **Idea Sparks** |
 
 它**不是**通用新闻站，也**不是**财经行情面板——只服务「跟 AI 相关的人」：研究者、工程师、产品、投资看行业的人。
 
@@ -29,7 +29,7 @@ AITrending 做两件事：
 
 - **41 个数据源 · 9 类**：公司博客、学术论文、学术研究、行业媒体、个人博客、Newsletter、AI 安全、中文媒体、开源热榜
 - **非 RSS 信号**：GitHub Trending、HuggingFace 热门论文、X AI 热帖（公开 API，无需 Twitter key）
-- **今日简报**：中文 headline / overview / briefs / keywords；本地可随时重生，Pages 随 Actions 更新
+- **今日简报**：中文 headline / overview / briefs / keywords；并附带 **Idea Sparks**（信号→机会→方案→MVP）；本地可随时重生，Pages 随 Actions 更新
 - **可读体验**：分类色点、新鲜度（NEW / 今日）、今天·本周·更早分组、深浅色主题
 - **工程向**：源可 `enabled` / `type` / `use_curl`；单源失败不拖垮；`dry-run` 验活；抓取日志与健康 API
 
@@ -89,7 +89,7 @@ feeds.json ──► fetcher / special_sources ──► SQLite (items, fetch_lo
 | `fetcher.py` | RSS + 调度入口；支持 dry-run |
 | `special_sources.py` | GitHub / HF Papers / X |
 | `db.py` | SQLite · FTS5 · digest 存取 |
-| `llm.py` / `digest.py` | 模型调用与选稿简报 |
+| `llm.py` / `digest.py` | 模型调用、选稿简报、Idea Sparks 产品发现 |
 | `app.py` | 本地 Web + 定时任务 |
 | `build.py` | Actions 用静态站点构建 |
 | `templates/` · `static/` | Flask 页与 Pages 静态页（共享 CSS） |
@@ -149,9 +149,11 @@ workflow 见 [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)。
 ## 产品原则
 
 1. **AI 垂直** — 不扩成综合资讯或行情站  
-2. **双模态** — 实时流负责「全」，简报负责「少而精」  
+2. **双模态** — 实时流负责「全」，简报负责「少而精」，Idea Sparks 负责「可动手」  
 3. **自托管友好** — SQLite、无强制云服务；LLM 可换成兼容 API  
 4. **源可配置** — 改 JSON 即可加减源，不必改业务代码  
+
+简报第二阶段会把今日信号映射为项目方向，方法参考 Product Trio 多视角头脑风暴与 Opportunity Solution Tree（信号 → 机会 → 方案 → MVP / 待验证假设）。
 
 更多规划与明确不做的事项见 [`ROADMAP.md`](ROADMAP.md)。
 

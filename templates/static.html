@@ -102,7 +102,7 @@
       </div>
       <div id="digest-empty" class="state-empty">
         <div class="state-empty-title">还没有今日简报</div>
-        <div class="state-empty-desc">下次 GitHub Actions 构建时会用 DeepSeek 自动生成</div>
+        <div class="state-empty-desc">下次 GitHub Actions 构建时会生成要点简报与今日 Idea Sparks</div>
       </div>
       <article id="digest-content" class="digest-content hidden"></article>
     </section>
@@ -396,6 +396,52 @@
             '</div></div></a>';
       }).join('');
 
+      var sparks = data.idea_sparks || [];
+      var sparkHtml = sparks.map(function(s, i) {
+        var scores = s.scores || {};
+        var scoreBits = [
+          scores.novelty ? '新意 ' + scores.novelty : '',
+          scores.feasibility ? '可行 ' + scores.feasibility : '',
+          scores.impact ? '影响 ' + scores.impact : ''
+        ].filter(Boolean).join(' · ');
+        var perspMap = { pm: 'PM', designer: '设计', engineer: '工程' };
+        var persp = perspMap[s.perspective] || (s.perspective || '');
+        var assumptions = (s.assumptions || []).map(function(a) {
+          return '<li>' + escapeHtml(a) + '</li>';
+        }).join('');
+        var links = (s.signal_urls || []).slice(0, 3).map(function(u, j) {
+          return '<a href="' + escapeHtml(u) + '" target="_blank" rel="noopener">信号 ' + (j + 1) + '</a>';
+        }).join('');
+        return '<article class="idea-card">' +
+          '<div class="idea-card-top">' +
+            '<span class="idea-rank">' + (i + 1) + '</span>' +
+            (persp ? '<span class="idea-persp">' + escapeHtml(persp) + '</span>' : '') +
+          '</div>' +
+          '<h3 class="idea-name">' + escapeHtml(s.name || '') + '</h3>' +
+          '<p class="idea-oneliner">' + escapeHtml(s.one_liner || '') + '</p>' +
+          (s.opportunity ? '<p class="idea-row"><span class="idea-label">机会</span>' + escapeHtml(s.opportunity) + '</p>' : '') +
+          (s.solution ? '<p class="idea-row"><span class="idea-label">方案</span>' + escapeHtml(s.solution) + '</p>' : '') +
+          (s.mvp ? '<p class="idea-row"><span class="idea-label">MVP</span>' + escapeHtml(s.mvp) + '</p>' : '') +
+          (s.why_now ? '<p class="idea-row idea-row--muted"><span class="idea-label">为何现在</span>' + escapeHtml(s.why_now) + '</p>' : '') +
+          (s.signal ? '<p class="idea-row idea-row--muted"><span class="idea-label">信号</span>' + escapeHtml(s.signal) + '</p>' : '') +
+          (assumptions ? '<ul class="idea-assumptions">' + assumptions + '</ul>' : '') +
+          '<div class="idea-card-meta">' +
+            (scoreBits ? '<span>' + escapeHtml(scoreBits) + '</span>' : '') +
+            (links ? '<span class="idea-links">' + links + '</span>' : '') +
+          '</div></article>';
+      }).join('');
+
+      var ideasSection = sparks.length
+        ? '<section class="digest-ideas">' +
+            '<div class="digest-ideas-head">' +
+              '<h2 class="digest-section-title">今日 Idea Sparks</h2>' +
+              '<p class="digest-section-desc">从信息洪流里挖可验证的项目方向（信号 → 机会 → 方案 → MVP）</p>' +
+            '</div>' +
+            '<div class="idea-grid">' + sparkHtml + '</div>' +
+            (data.idea_note ? '<p class="idea-note">' + escapeHtml(data.idea_note) + '</p>' : '') +
+          '</section>'
+        : '';
+
       contentEl.innerHTML =
         '<header class="digest-hero">' +
           '<p class="digest-kicker">AI Daily Brief</p>' +
@@ -403,7 +449,11 @@
           '<p class="digest-overview">' + escapeHtml(data.daily_overview || '') + '</p>' +
           (keywords ? '<div class="digest-keywords">' + keywords + '</div>' : '') +
         '</header>' +
-        '<div class="digest-briefs">' + briefHtml + '</div>' +
+        ideasSection +
+        '<section class="digest-briefs-wrap">' +
+          '<h2 class="digest-section-title">要点速览</h2>' +
+          '<div class="digest-briefs">' + briefHtml + '</div>' +
+        '</section>' +
         (data.editor_note ? '<footer class="digest-note">' + escapeHtml(data.editor_note) + '</footer>' : '');
     }
 
