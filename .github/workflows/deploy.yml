@@ -13,9 +13,13 @@ on:
       - 'app.py'
       - 'db.py'
       - 'fetcher.py'
+      - 'special_sources.py'
+      - 'digest.py'
+      - 'llm.py'
       - 'build.py'
       - 'feeds.json'
       - 'templates/**'
+      - 'static/**'
       - 'requirements.txt'
       - '.github/workflows/deploy.yml'
 
@@ -47,10 +51,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Fetch RSS feeds and build static site
+      - name: Fetch RSS feeds, generate digest, build static site
         run: python build.py
         env:
           PYTHONUNBUFFERED: '1'
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          LLM_MODEL: deepseek-chat
+          TZ: Asia/Shanghai
 
       - name: Verify build output
         run: |
@@ -60,6 +67,7 @@ jobs:
           echo "=== Item count ==="
           python -c "import json; d=json.load(open('docs/data/items.json')); print(f'Items: {len(d)}')"
           python -c "import json; d=json.load(open('docs/data/meta.json')); print(f'Feeds: {len(d[\"feeds\"])}, Total: {d[\"total_items\"]}')"
+          python -c "import json; d=json.load(open('docs/data/digest.json')); print('Digest:', d.get('hero_headline') or d.get('exists'))"
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
