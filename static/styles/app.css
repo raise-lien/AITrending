@@ -614,6 +614,134 @@ mark { background: color-mix(in srgb, var(--c-cat-3) 30%, transparent); color: v
   font-style: italic;
 }
 
+/* ── Idea Sparks 交互升级 ── */
+.idea-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin: var(--space-3) 0 var(--space-4);
+}
+.idea-pills { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+.idea-pill {
+  appearance: none;
+  font: inherit;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--c-border);
+  background: var(--c-surface-2);
+  color: var(--c-text-muted);
+  cursor: pointer;
+  transition: background var(--dur), color var(--dur), border-color var(--dur);
+}
+.idea-pill:hover { color: var(--c-text); border-color: var(--c-border-strong); }
+.idea-pill.active {
+  background: color-mix(in srgb, var(--c-accent) 18%, var(--c-surface));
+  color: var(--c-accent);
+  border-color: var(--c-accent);
+}
+.idea-sort {
+  appearance: none;
+  font: inherit;
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  padding: var(--space-2) 30px var(--space-2) var(--space-3);
+  border-radius: var(--r-pill);
+  border: 1px solid var(--c-border);
+  background-color: var(--c-surface-2);
+  color: var(--c-text-muted);
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%237c7c92' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 5l3 3 3-3'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+.idea-sort:focus { border-color: var(--c-brand); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-brand) 18%, transparent); }
+
+.idea-card { gap: var(--space-2); }
+.idea-toggle {
+  margin-left: auto;
+  appearance: none;
+  font: inherit;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--c-border);
+  background: var(--c-surface-2);
+  color: var(--c-text-muted);
+  cursor: pointer;
+  transition: background var(--dur), color var(--dur), border-color var(--dur);
+}
+.idea-toggle:hover { color: var(--c-text); border-color: var(--c-border-strong); }
+
+.idea-mvp {
+  font-size: var(--fs-sm);
+  color: var(--c-text);
+  line-height: var(--lh-base);
+}
+.idea-details { margin-top: var(--space-1); }
+/* 默认折叠，展开后显示细节 */
+.idea-card:not(.expanded) .idea-details { display: none; }
+.idea-actions { margin-top: var(--space-2); }
+.idea-copy {
+  appearance: none;
+  font: inherit;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--c-border);
+  background: var(--c-surface-2);
+  color: var(--c-text-muted);
+  cursor: pointer;
+  transition: background var(--dur), color var(--dur), border-color var(--dur);
+}
+.idea-copy:hover { color: var(--c-brand); border-color: var(--c-brand); }
+
+/* 评分可视化（进度条，跨卡可比） */
+.idea-scores {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: var(--space-2);
+}
+.score-bar {
+  display: grid;
+  grid-template-columns: 3em 1fr 2.6em;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-xs);
+  color: var(--c-text-faint);
+}
+.score-bar-label { font-weight: 600; color: var(--c-text-muted); }
+.score-bar-track {
+  height: 6px;
+  border-radius: var(--r-pill);
+  background: var(--c-surface-3);
+  overflow: hidden;
+}
+.score-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--r-pill);
+  background: linear-gradient(90deg, var(--c-accent), var(--c-brand));
+}
+.score-bar-val {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  text-align: right;
+  color: var(--c-text-muted);
+}
+.idea-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: var(--c-text-faint);
+  font-size: var(--fs-sm);
+  padding: var(--space-6);
+}
+
 /* 响应式 */
 @media (max-width: 640px) {
   .topbar-inner { padding: var(--space-3) var(--space-4); }
