@@ -1,4 +1,5 @@
 name: Build and Deploy to GitHub Pages
+# Redeploy trigger: digest requires DEEPSEEK_API_KEY secret
 
 on:
   # Cron: every 2 hours (UTC 00:00, 02:00, 04:00, ...)
