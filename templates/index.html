@@ -21,6 +21,10 @@
         <div class="logo-text"><span>AI</span>Trending</div>
       </div>
       <div class="topbar-actions">
+        <div class="view-toggle" role="tablist" aria-label="视图切换">
+          <button class="view-btn active" role="tab" aria-selected="true" data-view="feed" onclick="setView('feed')">信息流</button>
+          <button class="view-btn" role="tab" aria-selected="false" data-view="digest" onclick="setView('digest')">今日简报</button>
+        </div>
         <div class="stat-chip" title="已收集条目">
           <span class="dot"></span>
           <span id="stat-total">—</span> 条
@@ -48,54 +52,77 @@
 
   <main id="main" class="layout">
 
-    <div class="search-wrap" role="search">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-      <input id="search" type="text" placeholder="搜索 AI 研究、模型发布、技术动态…" class="search-input" oninput="debounceRender()" aria-label="搜索">
-    </div>
-
-    <div class="filter-row">
-      <span class="filter-label">分类</span>
-      <div class="cat-pills" id="cat-pills">
-        <button class="cat-pill active" data-cat="" onclick="setCategory(this.dataset.cat)"><span class="cat-dot"></span>全部</button>
-        {% for c in categories %}
-        <button class="cat-pill" data-cat="{{ c.name }}" onclick="setCategory(this.dataset.cat)"><span class="cat-dot"></span>{{ c.name }}</button>
-        {% endfor %}
+    <section id="view-feed">
+      <div class="search-wrap" role="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input id="search" type="text" placeholder="搜索 AI 研究、模型发布、技术动态…" class="search-input" oninput="debounceRender()" aria-label="搜索">
       </div>
-    </div>
 
-    <div class="filter-row" style="margin-bottom: var(--space-6);">
-      <span class="filter-label">来源</span>
-      <select id="feed-select" class="feed-select" onchange="setFeed(this.value)">
-        <option value="">全部来源</option>
-        {% for f in feeds %}
-        <option value="{{ f.feed_name }}">{{ f.feed_name }} ({{ f.cnt }})</option>
-        {% endfor %}
-      </select>
-      <span id="result-count" class="result-count"></span>
-    </div>
-
-    <div id="loading" class="hidden">
-      <div class="items-list">
-        <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
-        <div class="skeleton"></div><div class="skeleton"></div>
+      <div class="filter-row">
+        <span class="filter-label">分类</span>
+        <div class="cat-pills" id="cat-pills">
+          <button class="cat-pill active" data-cat="" onclick="setCategory(this.dataset.cat)"><span class="cat-dot"></span>全部</button>
+          {% for c in categories %}
+          <button class="cat-pill" data-cat="{{ c.name }}" onclick="setCategory(this.dataset.cat)"><span class="cat-dot"></span>{{ c.name }}</button>
+          {% endfor %}
+        </div>
       </div>
-    </div>
 
-    <div id="items"></div>
+      <div class="filter-row" style="margin-bottom: var(--space-6);">
+        <span class="filter-label">来源</span>
+        <select id="feed-select" class="feed-select" onchange="setFeed(this.value)">
+          <option value="">全部来源</option>
+          {% for f in feeds %}
+          <option value="{{ f.feed_name }}">{{ f.feed_name }} ({{ f.cnt }})</option>
+          {% endfor %}
+        </select>
+        <span id="result-count" class="result-count"></span>
+      </div>
 
-    <div id="load-more-wrap" class="load-more-wrap hidden">
-      <button class="load-more" id="btn-load-more" onclick="loadMore()">加载更多</button>
-    </div>
+      <div id="loading" class="hidden">
+        <div class="items-list">
+          <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+          <div class="skeleton"></div><div class="skeleton"></div>
+        </div>
+      </div>
 
-    <div id="loading-more" class="loading-spinner hidden">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-    </div>
+      <div id="items"></div>
 
-    <div id="empty" class="state-empty hidden">
-      <svg class="state-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/><path d="M8 11h6"/></svg>
-      <div class="state-empty-title">暂无数据</div>
-      <div class="state-empty-desc">点击右上角「刷新」拉取最新内容</div>
-    </div>
+      <div id="load-more-wrap" class="load-more-wrap hidden">
+        <button class="load-more" id="btn-load-more" onclick="loadMore()">加载更多</button>
+      </div>
+
+      <div id="loading-more" class="loading-spinner hidden">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+      </div>
+
+      <div id="empty" class="state-empty hidden">
+        <svg class="state-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/><path d="M8 11h6"/></svg>
+        <div class="state-empty-title">暂无数据</div>
+        <div class="state-empty-desc">点击右上角「刷新」拉取最新内容</div>
+      </div>
+    </section>
+
+    <section id="view-digest" class="hidden" aria-live="polite">
+      <div class="digest-toolbar">
+        <div class="digest-toolbar-left">
+          <h1 class="digest-page-title">今日 AI 简报</h1>
+          <span id="digest-meta" class="digest-meta"></span>
+        </div>
+        <button class="btn btn--primary" id="btn-gen-digest" onclick="generateDigest(true)">
+          生成 / 刷新简报
+        </button>
+      </div>
+      <div id="digest-loading" class="digest-loading hidden">
+        <div class="loading-spinner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg></div>
+        <p>DeepSeek 正在整理今日要点…（约 30–90 秒）</p>
+      </div>
+      <div id="digest-empty" class="state-empty">
+        <div class="state-empty-title">还没有今日简报</div>
+        <div class="state-empty-desc">点击「生成 / 刷新简报」，用 DeepSeek 从信息流中提炼今日 AI 要点</div>
+      </div>
+      <article id="digest-content" class="digest-content hidden"></article>
+    </section>
   </main>
 
   <script>
@@ -147,10 +174,13 @@
       return '更早';
     }
 
+    const LLM_READY = {{ (llm_ready|default(false))|tojson }};
+    let currentView = 'feed';
+
     function cardHtml(item) {
       const title = item.title || '(no title)';
       const feed = item.feed_name || '';
-      const summaryRaw = stripHtml(item.summary || '');
+      const summaryRaw = stripHtml(item.display_summary || item.zh_summary || item.summary || '');
       const summary = summaryRaw ? summaryRaw.slice(0, 240) : '';
       const link = escapeHtml(item.link || '#');
       const publishedTs = item.published_ts || '';
@@ -364,6 +394,108 @@
       }
     }, { rootMargin: '200px' });
     observer.observe(sentinel);
+
+    // ── View: feed | digest ──
+    function setView(view) {
+      currentView = view;
+      document.querySelectorAll('.view-btn').forEach(b => {
+        const on = b.dataset.view === view;
+        b.classList.toggle('active', on);
+        b.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      document.getElementById('view-feed').classList.toggle('hidden', view !== 'feed');
+      document.getElementById('view-digest').classList.toggle('hidden', view !== 'digest');
+      if (view === 'digest') loadDigest();
+    }
+
+    function renderDigest(data) {
+      const emptyEl = document.getElementById('digest-empty');
+      const contentEl = document.getElementById('digest-content');
+      const metaEl = document.getElementById('digest-meta');
+      if (!data || !data.hero_headline) {
+        emptyEl.classList.remove('hidden');
+        contentEl.classList.add('hidden');
+        metaEl.textContent = '';
+        return;
+      }
+      emptyEl.classList.add('hidden');
+      contentEl.classList.remove('hidden');
+      metaEl.textContent = (data.date || '') + (data.model ? ' · ' + data.model : '');
+
+      const keywords = (data.keywords || []).map(k =>
+        `<span class="digest-kw">${escapeHtml(k)}</span>`
+      ).join('');
+
+      const briefs = (data.briefs || []).slice().sort((a, b) => (b.importance || 0) - (a.importance || 0));
+      const briefHtml = briefs.map((b, i) => `
+        <a class="digest-brief" href="${escapeHtml(b.url || '#')}" target="_blank" rel="noopener">
+          <div class="digest-brief-rank">${i + 1}</div>
+          <div class="digest-brief-body">
+            <div class="digest-brief-title">${escapeHtml(b.title || '')}</div>
+            <div class="digest-brief-summary">${escapeHtml(b.summary || '')}</div>
+            <div class="digest-brief-meta">
+              <span>${escapeHtml(b.source || '')}</span>
+              ${b.importance ? `<span>重要度 ${b.importance}/5</span>` : ''}
+            </div>
+          </div>
+        </a>`).join('');
+
+      contentEl.innerHTML = `
+        <header class="digest-hero">
+          <p class="digest-kicker">AI Daily Brief</p>
+          <h2 class="digest-headline">${escapeHtml(data.hero_headline)}</h2>
+          <p class="digest-overview">${escapeHtml(data.daily_overview || '')}</p>
+          ${keywords ? `<div class="digest-keywords">${keywords}</div>` : ''}
+        </header>
+        <div class="digest-briefs">${briefHtml}</div>
+        ${data.editor_note ? `<footer class="digest-note">${escapeHtml(data.editor_note)}</footer>` : ''}
+      `;
+    }
+
+    async function loadDigest() {
+      const loading = document.getElementById('digest-loading');
+      loading.classList.add('hidden');
+      try {
+        const res = await fetch('/api/digest');
+        if (res.status === 404) {
+          renderDigest(null);
+          return;
+        }
+        const data = await res.json();
+        renderDigest(data);
+      } catch (e) {
+        renderDigest(null);
+      }
+    }
+
+    async function generateDigest(force) {
+      if (!LLM_READY) {
+        alert('未配置 DEEPSEEK_API_KEY。请在项目根目录 .env 中设置后重启服务。');
+        return;
+      }
+      const btn = document.getElementById('btn-gen-digest');
+      const loading = document.getElementById('digest-loading');
+      const emptyEl = document.getElementById('digest-empty');
+      btn.disabled = true;
+      loading.classList.remove('hidden');
+      emptyEl.classList.add('hidden');
+      document.getElementById('digest-content').classList.add('hidden');
+      try {
+        const res = await fetch('/api/digest/generate?force=' + (force ? '1' : '0'));
+        const data = await res.json();
+        if (!res.ok || data.status === 'error') {
+          throw new Error(data.message || '生成失败');
+        }
+        renderDigest(data.digest);
+      } catch (e) {
+        emptyEl.classList.remove('hidden');
+        emptyEl.querySelector('.state-empty-title').textContent = '生成失败';
+        emptyEl.querySelector('.state-empty-desc').textContent = e.message || String(e);
+      } finally {
+        loading.classList.add('hidden');
+        btn.disabled = false;
+      }
+    }
 
     // ── Init ──
     document.getElementById('year-select').value = currentYear;

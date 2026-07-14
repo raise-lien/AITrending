@@ -46,11 +46,14 @@ def export_items_json():
     conn = get_db()
     try:
         rows = conn.execute("""
-            SELECT id, feed_name, title, link, published, published_ts, summary
+            SELECT id, feed_name, title, link, published, published_ts, summary, zh_summary
             FROM items
             ORDER BY COALESCE(published_ts, fetched_at, '1970-01-01') DESC
         """).fetchall()
         items = [dict(r) for r in rows]
+        for it in items:
+            if it.get("zh_summary"):
+                it["display_summary"] = it["zh_summary"]
         print(f"Exported {len(items)} items")
 
         # Write full data
@@ -117,6 +120,32 @@ def export_meta_json(items):
     print(f"Meta: {len(feeds)} feeds, {len(categories)} categories, {len(years)} years")
 
 
+def generate_and_export_digest():
+    """Generate today's digest via DeepSeek (if configured) and export JSON."""
+    print("=== Generating daily digest ===")
+    from llm import is_configured
+    out_path = os.path.join(DATA_DIR, "digest.json")
+
+    if not is_configured():
+        print("DEEPSEEK_API_KEY not set — writing empty digest.json")
+        with open(out_path, "w", encoding="utf-8") as f:
+            json.dump({"exists": False}, f)
+        return None
+
+    try:
+        from digest import generate_daily_digest
+        data = generate_daily_digest(force=True)
+        with open(out_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, separators=(",", ":"))
+        print(f"Digest: {data.get('hero_headline', '')[:60]}")
+        return data
+    except Exception as e:
+        print(f"[WARN] digest generation failed: {e}")
+        with open(out_path, "w", encoding="utf-8") as f:
+            json.dump({"exists": False, "error": str(e)}, f)
+        return None
+
+
 def generate_html():
     """Generate a self-contained static index.html in docs/.
 
@@ -160,6 +189,7 @@ def main():
 
     items = export_items_json()
     export_meta_json(items)
+    generate_and_export_digest()
     generate_html()
 
     print("\n=== Build complete ===")
@@ -168,6 +198,7 @@ def main():
     print(f"  styles/app.css")
     print(f"  data/items.json ({len(items)} items)")
     print(f"  data/meta.json")
+    print(f"  data/digest.json")
     print(f"  favicon.svg")
 
 

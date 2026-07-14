@@ -3,6 +3,11 @@ aitrending.db
 aitrending.db-wal
 aitrending.db-shm
 
+# Secrets
+.env
+.env.local
+*.pem
+
 # Python
 __pycache__/
 *.pyc
