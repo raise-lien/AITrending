@@ -201,4 +201,5 @@ if __name__ == "__main__":
             "date": d.get("date"),
             "hero_headline": d.get("hero_headline"),
             "briefs": len(d.get("briefs") or []),
+            "idea_sparks": len(d.get("idea_sparks") or []),
         }, ensure_ascii=False, indent=2))
