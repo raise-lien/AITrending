@@ -522,6 +522,7 @@ mark { background: color-mix(in srgb, var(--c-cat-3) 30%, transparent); color: v
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  overflow: hidden;
 }
 .idea-card-top {
   display: flex;
@@ -565,6 +566,8 @@ mark { background: color-mix(in srgb, var(--c-cat-3) 30%, transparent); color: v
   font-size: var(--fs-sm);
   color: var(--c-text-muted);
   line-height: var(--lh-base);
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 .idea-row--muted { color: var(--c-text-faint); }
 .idea-label {
@@ -599,12 +602,18 @@ mark { background: color-mix(in srgb, var(--c-cat-3) 30%, transparent); color: v
 }
 .idea-links {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
+  flex-direction: column;
+  gap: var(--space-1);
+  max-width: 100%;
 }
 .idea-links a {
   color: var(--c-accent);
   text-decoration: none;
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .idea-links a:hover { text-decoration: underline; }
 .idea-note {
